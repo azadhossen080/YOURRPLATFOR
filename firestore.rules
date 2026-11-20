@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(data, allowed) {
+      return data.keys().hasOnly(allowed);
+    }
+
+    function hasRequiredFields(data, required) {
+      return data.keys().hasAll(required);
+    }
+
+    function isValidPublicProfile(data, userId) {
+      let required = [
+        'uid', 'name', 'customUserId', 'handle', 'bio',
+        'followersCount', 'profileCreated', 'coverColorHex',
+        'avatarColorHex', 'createdAt', 'updatedAt'
+      ];
+      let allowed = [
+        'uid', 'name', 'customUserId', 'handle', 'bio',
+        'followersCount', 'profileCreated', 'coverColorHex',
+        'avatarColorHex', 'coverImageUri', 'avatarImageUri',
+        'createdAt', 'updatedAt'
+      ];
+      return hasRequiredFields(data, required)
+        && hasOnlyAllowedFields(data, allowed)
+        && data.uid == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.customUserId is string && data.customUserId.size() >= 1 && data.customUserId.size() <= 40
+        && data.handle is string && data.handle.size() <= 45
+        && data.bio is string && data.bio.size() <= 300
+        && data.followersCount is string && data.followersCount.size() >= 1 && data.followersCount.size() <= 20
+        && data.profileCreated is bool
+        && data.coverColorHex is number
+        && data.avatarColorHex is number
+        && (!('coverImageUri' in data) || (data.coverImageUri is string && data.coverImageUri.size() <= 1000))
+        && (!('avatarImageUri' in data) || (data.avatarImageUri is string && data.avatarImageUri.size() <= 1000))
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPrivateInfo(data, userId) {
+      let keys = ['uid', 'email', 'phoneNumber', 'createdAt', 'updatedAt'];
+      return hasRequiredFields(data, keys)
+        && hasOnlyAllowedFields(data, keys)
+        && data.uid == userId
+        && data.email is string && data.email.size() <= 120
+        && data.phoneNumber is string && data.phoneNumber.size() <= 30
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPost(data, userId) {
+      let required = [
+        'uid', 'userName', 'postText', 'mediaType', 'video',
+        'likeCount', 'liked', 'comments', 'userPost',
+        'createdAt', 'updatedAt'
+      ];
+      let allowed = [
+        'uid', 'userName', 'postText', 'mediaType', 'video',
+        'likeCount', 'liked', 'comments', 'userPost',
+        'mediaUri', 'thumbnailUri', 'createdAt', 'updatedAt'
+      ];
+      return hasRequiredFields(data, required)
+        && hasOnlyAllowedFields(data, allowed)
+        && data.uid == userId
+        && data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 80
+        && data.postText is string && data.postText.size() >= 1 && data.postText.size() <= 2000
+        && data.mediaType in ['text', 'camera', 'gallery', 'reels', 'gradient']
+        && data.video is bool
+        && data.likeCount is int && data.likeCount >= 0
+        && data.liked is bool
+        && data.comments is list && data.comments.size() <= 200
+        && data.userPost is bool
+        && (!('mediaUri' in data) || (data.mediaUri is string && data.mediaUri.size() <= 1000))
+        && (!('thumbnailUri' in data) || (data.thumbnailUri is string && data.thumbnailUri.size() <= 1000))
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFriend(data, userId) {
+      let keys = [
+        'uid', 'name', 'handle', 'bio', 'mutualFriendsCount',
+        'avatarColorHex', 'verified', 'online', 'status',
+        'requestTimeAgo', 'createdAt', 'updatedAt'
+      ];
+      return hasRequiredFields(data, keys)
+        && hasOnlyAllowedFields(data, keys)
+        && data.uid == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.handle is string && data.handle.size() >= 1 && data.handle.size() <= 60
+        && data.bio is string && data.bio.size() <= 300
+        && data.mutualFriendsCount is int && data.mutualFriendsCount >= 0
+        && data.avatarColorHex is number
+        && data.verified is bool
+        && data.online is bool
+        && data.status in ['FRIEND', 'INCOMING_REQUEST', 'OUTGOING_REQUEST', 'SUGGESTION']
+        && data.requestTimeAgo is string && data.requestTimeAgo.size() <= 60
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidReview(data) {
+      let keys = [
+        'uid', 'authorUserId', 'userName', 'rating', 'comment',
+        'status', 'pinned', 'createdAt', 'updatedAt'
+      ];
+      return hasRequiredFields(data, keys)
+        && hasOnlyAllowedFields(data, keys)
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.authorUserId is string && data.authorUserId.size() >= 1 && data.authorUserId.size() <= 60
+        && data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 80
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 1000
+        && data.status in ['APPROVED', 'PENDING', 'HIDDEN']
+        && data.pinned is bool
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/public/profile {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isOwner(userId)
+        && isValidPublicProfile(request.resource.data, userId);
+      allow update: if isOwner(userId)
+        && isValidPublicProfile(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/private/info {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidPrivateInfo(request.resource.data, userId);
+      allow update: if isOwner(userId)
+        && isValidPrivateInfo(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/posts/{postId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidPost(request.resource.data, userId);
+      allow update: if isOwner(userId)
+        && isValidPost(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/friends/{friendId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidFriend(request.resource.data, userId);
+      allow update: if isOwner(userId)
+        && isValidFriend(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    match /reviews/{reviewId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (resource.data.status == 'APPROVED' || resource.data.uid == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && isValidReview(request.resource.data);
+      allow update: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && isValidReview(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

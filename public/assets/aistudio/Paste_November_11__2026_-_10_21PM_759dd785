@@ -1,0 +1,1587 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+
+void main() {
+  runApp(const YourPlatformApp());
+}
+
+class YourPlatformApp extends StatelessWidget {
+  const YourPlatformApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'YOURPLATFORM',
+      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF5352ED),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF5352ED),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: const SplashScreen(),
+    );
+  }
+}
+
+// ================= ১. মডেল ও ডাটা =================
+
+class PostModel {
+  final String id;
+  final String userName;
+  final String timeAgo;
+  String postText;
+  final Widget? postMedia;
+  final String? postType;
+  int likeCount;
+  bool isLiked;
+  List<String> comments;
+
+  PostModel({
+    required this.id,
+    required this.userName,
+    required this.timeAgo,
+    required this.postText,
+    this.postMedia,
+    this.postType = 'text',
+    this.likeCount = 0,
+    this.isLiked = false,
+    List<String>? comments,
+  }) : comments = comments ?? [];
+}
+
+// ================= ২. স্প্ল্যাশ স্ক্রিন =================
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _controller.forward();
+
+    Timer(const Duration(milliseconds: 2000), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => const CustomHomeScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E1E2C),
+      body: Center(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF5352ED),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.play_arrow_rounded,
+                    color: Colors.white, size: 36),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'YOURPLATFORM',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= ৩. মূল হোম স্ক্রিন =================
+
+class CustomHomeScreen extends StatefulWidget {
+  const CustomHomeScreen({super.key});
+
+  @override
+  State<CustomHomeScreen> createState() => _CustomHomeScreenState();
+}
+
+class _CustomHomeScreenState extends State<CustomHomeScreen> {
+  int _selectedIndex = 0;
+
+  final List<PostModel> _posts = [
+    PostModel(
+      id: '1',
+      userName: 'YOURPLATFORM Official',
+      timeAgo: '২ মিনিট আগে',
+      postText:
+          'YOURPLATFORM-এ আপনাকে স্বাগতম! আপনার কভার ফটো এবং প্রোফাইল পিকচার এডিট করতে প্রোফাইলে যান।',
+      likeCount: 18,
+      comments: ['দারুণ অভিজ্ঞতা!'],
+      postMedia: Container(
+        height: 160,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF5352ED), Color(0xFFFF4757)],
+          ),
+        ),
+        child: const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.play_circle_fill, color: Colors.white, size: 40),
+              SizedBox(width: 8),
+              Text(
+                'YOURPLATFORM',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+    PostModel(
+      id: '2',
+      userName: 'আজাদ হোসেন',
+      timeAgo: '১ ঘণ্টা আগে',
+      postText: 'নতুন ক্যামেরা, গ্যালারি ও রিলস আপলোড সাপোর্ট যুক্ত করা হলো।',
+      likeCount: 52,
+      comments: ['অভিনন্দন ভাই!'],
+    ),
+  ];
+
+  void _addNewPost(String text, String type, Widget? media) {
+    setState(() {
+      _posts.insert(
+        0,
+        PostModel(
+          id: DateTime.now().toString(),
+          userName: 'আজাদ হোসেন',
+          timeAgo: 'মাত্র এখন',
+          postText: text,
+          postType: type,
+          postMedia: media,
+        ),
+      );
+      _selectedIndex = 0;
+    });
+  }
+
+  void _deletePost(String id) {
+    setState(() {
+      _posts.removeWhere((p) => p.id == id);
+    });
+  }
+
+  Widget _buildBodyContent() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildHomeFeedView();
+      case 1:
+        return const WavesView();
+      case 2:
+        return CreatePostView(onPostCreated: _addNewPost);
+      case 3:
+        return const SearchView();
+      case 4:
+        return ProfileView(
+          userPosts: _posts.where((p) => p.userName == 'আজাদ হোসেন').toList(),
+          allPosts: _posts,
+          onDeletePost: _deletePost,
+        );
+      default:
+        return _buildHomeFeedView();
+    }
+  }
+
+  Widget _buildHeaderLogo() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF5352ED),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF5352ED).withOpacity(0.4),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          'YOURPLATFORM',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF5352ED),
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.white,
+                border: const Border(
+                  bottom: BorderSide(color: Colors.black12, width: 1),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildHeaderLogo(),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none_rounded,
+                            color: Color(0xFF5352ED), size: 26),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen()),
+                          );
+                        },
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedIndex = 4),
+                        child: const CircleAvatar(
+                          radius: 14,
+                          backgroundColor: Color(0xFF5352ED),
+                          child: Icon(Icons.person, size: 18, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _buildBodyContent(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey[900] : Colors.white,
+          border: const Border(top: BorderSide(color: Colors.black12, width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: Icon(Icons.home_rounded,
+                  size: 28,
+                  color: _selectedIndex == 0
+                      ? const Color(0xFF5352ED)
+                      : Colors.grey),
+              onPressed: () => setState(() => _selectedIndex = 0),
+            ),
+            IconButton(
+              icon: Icon(Icons.video_library_rounded,
+                  size: 26,
+                  color: _selectedIndex == 1
+                      ? const Color(0xFF5352ED)
+                      : Colors.grey),
+              onPressed: () => setState(() => _selectedIndex = 1),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _selectedIndex = 2),
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF5352ED),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 28),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.search_rounded,
+                  size: 28,
+                  color: _selectedIndex == 3
+                      ? const Color(0xFF5352ED)
+                      : Colors.grey),
+              onPressed: () => setState(() => _selectedIndex = 3),
+            ),
+            IconButton(
+              icon: Icon(Icons.person_rounded,
+                  size: 28,
+                  color: _selectedIndex == 4
+                      ? const Color(0xFF5352ED)
+                      : Colors.grey),
+              onPressed: () => setState(() => _selectedIndex = 4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeFeedView() {
+    return ListView.builder(
+      key: const ValueKey(0),
+      padding: const EdgeInsets.all(12),
+      itemCount: _posts.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Card(
+            elevation: 1,
+            margin: const EdgeInsets.only(bottom: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: InkWell(
+              onTap: () => setState(() => _selectedIndex = 2),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Color(0xFF5352ED),
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'নতুন কিছু পোস্ট বা ভিডিও শেয়ার করুন...',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                    ),
+                    Icon(Icons.video_call_rounded, color: Color(0xFF5352ED)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        final post = _posts[index - 1];
+        return PostCardItem(
+          post: post,
+          onPostUpdated: () => setState(() {}),
+        );
+      },
+    );
+  }
+}
+
+// ================= ৪. নোটিফিকেশন স্ক্রিন =================
+
+class NotificationsScreen extends StatelessWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('নোটিফিকেশনস'),
+        backgroundColor: const Color(0xFF5352ED),
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: const [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue,
+              child: Icon(Icons.thumb_up, color: Colors.white, size: 18),
+            ),
+            title: Text('YOURPLATFORM Official আপনার পোস্টে লাইক দিয়েছেন।'),
+            subtitle: Text('১০ মিনিট আগে'),
+          ),
+          Divider(),
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.green,
+              child: Icon(Icons.comment, color: Colors.white, size: 18),
+            ),
+            title: Text('Tech World আপনার পোস্টে কমেন্ট করেছেন।'),
+            subtitle: Text('১ ঘণ্টা আগে'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================= ৫. পোস্ট কার্ড =================
+
+class PostCardItem extends StatefulWidget {
+  final PostModel post;
+  final VoidCallback onPostUpdated;
+
+  const PostCardItem({
+    super.key,
+    required this.post,
+    required this.onPostUpdated,
+  });
+
+  @override
+  State<PostCardItem> createState() => _PostCardItemState();
+}
+
+class _PostCardItemState extends State<PostCardItem> {
+  void _openCommentBottomSheet() {
+    final TextEditingController commentController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'কমেন্টসমূহ',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: widget.post.comments.isEmpty
+                        ? const Center(
+                            child: Text('কোনো কমেন্ট নেই। প্রথম কমেন্ট করুন!'))
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: widget.post.comments.length,
+                            itemBuilder: (context, i) {
+                              return ListTile(
+                                leading: const CircleAvatar(
+                                  radius: 14,
+                                  child: Icon(Icons.person, size: 16),
+                                ),
+                                title: Text(widget.post.comments[i],
+                                    style: const TextStyle(fontSize: 13)),
+                              );
+                            },
+                          ),
+                  ),
+                  const Divider(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: commentController,
+                          decoration: const InputDecoration(
+                            hintText: 'আপনার কমেন্ট লিখুন...',
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Color(0xFF5352ED)),
+                        onPressed: () {
+                          if (commentController.text.trim().isNotEmpty) {
+                            setModalState(() {
+                              widget.post.comments
+                                  .add(commentController.text.trim());
+                            });
+                            widget.onPostUpdated();
+                            commentController.clear();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Color(0xFF5352ED),
+                  child: Icon(Icons.person, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.post.userName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    Text(
+                      widget.post.timeAgo,
+                      style:
+                          const TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              widget.post.postText,
+              style: const TextStyle(fontSize: 13, height: 1.3),
+            ),
+            if (widget.post.postMedia != null) ...[
+              const SizedBox(height: 10),
+              widget.post.postMedia!,
+            ],
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Colors.black12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      widget.post.isLiked = !widget.post.isLiked;
+                      widget.post.isLiked
+                          ? widget.post.likeCount++
+                          : widget.post.likeCount--;
+                    });
+                    widget.onPostUpdated();
+                  },
+                  icon: Icon(
+                    widget.post.isLiked
+                        ? Icons.thumb_up_alt
+                        : Icons.thumb_up_alt_outlined,
+                    size: 18,
+                    color: widget.post.isLiked
+                        ? const Color(0xFF5352ED)
+                        : Colors.grey,
+                  ),
+                  label: Text(
+                    '${widget.post.likeCount} লাইক',
+                    style: TextStyle(
+                      color: widget.post.isLiked
+                          ? const Color(0xFF5352ED)
+                          : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _openCommentBottomSheet,
+                  icon: const Icon(Icons.chat_bubble_outline,
+                      size: 18, color: Colors.grey),
+                  label: Text(
+                    '${widget.post.comments.length} কমেন্ট',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('পোস্ট লিংক কপি করা হয়েছে!')),
+                    );
+                  },
+                  icon: const Icon(Icons.share_outlined,
+                      size: 18, color: Colors.grey),
+                  label: const Text('শেয়ার',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================= ৬. নতুন পোস্ট ভিউ (আপডেটেড: ক্যামেরা, গ্যালারি ও রিলস অপশনসহ) =================
+
+class CreatePostView extends StatefulWidget {
+  final Function(String text, String type, Widget? media) onPostCreated;
+
+  const CreatePostView({super.key, required this.onPostCreated});
+
+  @override
+  State<CreatePostView> createState() => _CreatePostViewState();
+}
+
+class _CreatePostViewState extends State<CreatePostView> {
+  final TextEditingController _controller = TextEditingController();
+  String _selectedType = 'text'; // 'text', 'camera', 'gallery', 'reels'
+  Widget? _selectedMediaPreview;
+
+  void _selectOption(String type, String title, IconData icon, Color color) {
+    setState(() {
+      _selectedType = type;
+      _selectedMediaPreview = Container(
+        height: 160,
+        margin: const EdgeInsets.only(top: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color, width: 1.5),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 44, color: color),
+              const SizedBox(height: 6),
+              Text(
+                '$title ফাইল যুক্ত করা হয়েছে!',
+                style: TextStyle(color: color, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '(পাবলিশ চাপলে পোস্টে যুক্ত হবে)',
+                style: TextStyle(color: Colors.grey, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$title সিলেক্ট করা হয়েছে')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SingleChildScrollView(
+      key: const ValueKey(2),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'নতুন কন্টেন্ট পোস্ট করুন',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (_selectedMediaPreview != null)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedMediaPreview = null;
+                      _selectedType = 'text';
+                    });
+                  },
+                  icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                  label: const Text('রিমুভ', style: TextStyle(color: Colors.red, fontSize: 12)),
+                )
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: _selectedType == 'reels'
+                  ? 'ভিডিও বা রিলস ক্যাপশন লিখুন...'
+                  : 'আপনার মন যা চায় লিখুন...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
+            ),
+          ),
+          if (_selectedMediaPreview != null) _selectedMediaPreview!,
+          const SizedBox(height: 16),
+
+          // 💡 মিডিয়া নির্বাচন বাটনসমূহ
+          const Text(
+            'মিডিয়া নির্বাচন করুন:',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(
+                      color: _selectedType == 'camera' ? const Color(0xFF5352ED) : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => _selectOption('camera', 'ক্যামেরা', Icons.camera_alt, Colors.pink),
+                  icon: const Icon(Icons.camera_alt, color: Colors.pink, size: 20),
+                  label: const Text('ক্যামেরা', style: TextStyle(fontSize: 11)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(
+                      color: _selectedType == 'gallery' ? const Color(0xFF5352ED) : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => _selectOption('gallery', 'গ্যালারি', Icons.photo_library, Colors.green),
+                  icon: const Icon(Icons.photo_library, color: Colors.green, size: 20),
+                  label: const Text('গ্যালারি', style: TextStyle(fontSize: 11)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(
+                      color: _selectedType == 'reels' ? const Color(0xFF5352ED) : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => _selectOption('reels', 'রিলস', Icons.video_call, const Color(0xFF5352ED)),
+                  icon: const Icon(Icons.video_call, color: Color(0xFF5352ED), size: 20),
+                  label: const Text('রিলস', style: TextStyle(fontSize: 11)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5352ED),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              if (_controller.text.trim().isNotEmpty || _selectedMediaPreview != null) {
+                widget.onPostCreated(
+                  _controller.text.trim().isEmpty ? 'নতুন আপডেট পোস্ট' : _controller.text.trim(),
+                  _selectedType,
+                  _selectedMediaPreview,
+                );
+                _controller.clear();
+                setState(() {
+                  _selectedMediaPreview = null;
+                  _selectedType = 'text';
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('পোস্ট সফলভাবে পাবলিশ হয়েছে!')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('কিছু লিখুন অথবা মিডিয়া যুক্ত করুন!')),
+                );
+              }
+            },
+            icon: const Icon(Icons.send),
+            label: const Text('পাবলিশ করুন', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================= ৭. Waves (ভিডিও) =================
+
+class WavesView extends StatelessWidget {
+  const WavesView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      key: const ValueKey(1),
+      scrollDirection: Axis.vertical,
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.play_circle_fill,
+                        size: 64, color: Colors.white70),
+                    const SizedBox(height: 8),
+                    Text('Waves Video #${index + 1}',
+                        style: const TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ================= ৮. সার্চ ভিউ =================
+
+class SearchView extends StatelessWidget {
+  const SearchView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const ValueKey(3),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF5352ED)),
+              hintText: 'ইউজার বা বিষয় খুঁজুন...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================= ৯. প্রোফাইল ভিউ =================
+
+class ProfileView extends StatefulWidget {
+  final List<PostModel> userPosts;
+  final List<PostModel> allPosts;
+  final Function(String id) onDeletePost;
+
+  const ProfileView({
+    super.key,
+    required this.userPosts,
+    required this.allPosts,
+    required this.onDeletePost,
+  });
+
+  @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  Color _coverColor = const Color(0xFF3F51B5);
+  Color _avatarColor = const Color(0xFF5352ED);
+
+  void _editPhotoDialog(bool isCover) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isCover ? 'কভার ফটো পরিবর্তন করুন' : 'প্রোফাইল পিকচার পরিবর্তন করুন',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFF5352ED)),
+                title: const Text('গ্যালারি থেকে পছন্দ করুন'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    if (isCover) {
+                      _coverColor = Colors.teal;
+                    } else {
+                      _avatarColor = Colors.deepOrange;
+                    }
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isCover
+                          ? 'কভার ফটো আপডেট করা হয়েছে!'
+                          : 'প্রোফাইল পিকচার আপডেট করা হয়েছে!'),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.pink),
+                title: const Text('ক্যামেরা দিয়ে নতুন ছবি তুলুন'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    if (isCover) {
+                      _coverColor = Colors.purple;
+                    } else {
+                      _avatarColor = Colors.green;
+                    }
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isCover
+                          ? 'কভার ফটো আপডেট করা হয়েছে!'
+                          : 'প্রোফাইল পিকচার আপডেট করা হয়েছে!'),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showQrCodeDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Center(child: Text('প্রোফাইল QR কোড')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 150,
+              height: 150,
+              color: Colors.black12,
+              child: const Icon(Icons.qr_code_2, size: 120, color: Color(0xFF5352ED)),
+            ),
+            const SizedBox(height: 10),
+            const Text('@azadhossen', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('বন্ধ করুন'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showActivityCenter() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text('অ্যাক্টিভিটি সেন্টার',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 12),
+            ListTile(
+              leading: Icon(Icons.history),
+              title: Text('আপনার সাম্প্রতিক পোস্ট ও কমেন্ট হিস্ট্রি'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('মাই প্রোফাইল', style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'qr') _showQrCodeDialog();
+                if (value == 'activity') _showActivityCenter();
+                if (value == 'settings') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SettingsAndPrivacyScreen(
+                        userPosts: widget.userPosts,
+                        onDeletePost: widget.onDeletePost,
+                      ),
+                    ),
+                  );
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, size: 20),
+                      SizedBox(width: 10),
+                      Text('ইউর প্রোফাইল'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'qr',
+                  child: Row(
+                    children: [
+                      Icon(Icons.qr_code, size: 20),
+                      SizedBox(width: 10),
+                      Text('প্রোফাইল QR কোড'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'activity',
+                  child: Row(
+                    children: [
+                      Icon(Icons.local_activity, size: 20),
+                      SizedBox(width: 10),
+                      Text('অ্যাক্টিভিটি সেন্টার'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings, size: 20),
+                      SizedBox(width: 10),
+                      Text('সেটিং এন্ড প্রাইভেসি'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'auth',
+                  child: Row(
+                    children: [
+                      Icon(Icons.login, color: Colors.redAccent, size: 20),
+                      SizedBox(width: 10),
+                      Text('সাইন ইন / লগআউট', style: TextStyle(color: Colors.redAccent)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            SizedBox(
+              height: 190,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: 130,
+                    width: double.infinity,
+                    color: _coverColor,
+                    child: Stack(
+                      children: [
+                        const Center(
+                          child: Icon(Icons.landscape, size: 50, color: Colors.white30),
+                        ),
+                        Positioned(
+                          right: 12,
+                          bottom: 12,
+                          child: InkWell(
+                            onTap: () => _editPhotoDialog(true),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.edit,
+                                  color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 20,
+                    child: Stack(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: _avatarColor,
+                            child: const Icon(Icons.person,
+                                size: 45, color: Colors.white),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: InkWell(
+                            onTap: () => _editPhotoDialog(false),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF5352ED),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt,
+                                  color: Colors.white, size: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'আজাদ হোসেন',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Text('@azadhossen',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      _buildMiniStat('পোস্ট', widget.userPosts.length.toString()),
+                      const SizedBox(width: 12),
+                      _buildMiniStat('ফলোয়ার্স', '১.২K'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const TabBar(
+              tabs: [
+                Tab(text: 'আমার পোস্টসমূহ'),
+                Tab(text: 'মিডিয়া গ্যালারি'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  widget.userPosts.isEmpty
+                      ? const Center(child: Text('আপনার কোনো পোস্ট নেই।'))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: widget.userPosts.length,
+                          itemBuilder: (context, index) {
+                            return PostCardItem(
+                              post: widget.userPosts[index],
+                              onPostUpdated: () => setState(() {}),
+                            );
+                          },
+                        ),
+                  GridView.builder(
+                    padding: const EdgeInsets.all(8),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 4,
+                      mainAxisSpacing: 4,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        color: Colors.indigo.withOpacity(0.15),
+                        child: const Icon(Icons.image, color: Color(0xFF5352ED)),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniStat(String label, String value) {
+    return Column(
+      children: [
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Color(0xFF5352ED))),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      ],
+    );
+  }
+}
+
+// ================= ১০. সেটিং এন্ড প্রাইভেসি স্ক্রিন =================
+
+class SettingsAndPrivacyScreen extends StatefulWidget {
+  final List<PostModel> userPosts;
+  final Function(String id) onDeletePost;
+
+  const SettingsAndPrivacyScreen({
+    super.key,
+    required this.userPosts,
+    required this.onDeletePost,
+  });
+
+  @override
+  State<SettingsAndPrivacyScreen> createState() =>
+      _SettingsAndPrivacyScreenState();
+}
+
+class _SettingsAndPrivacyScreenState extends State<SettingsAndPrivacyScreen> {
+  bool _isDimmingEnabled = true;
+  double _dimmingLevel = 30.0;
+  bool _isLocationAllowed = true;
+  String _selectedLanguage = 'বাংলা (Bangladesh)';
+
+  void _openLanguagePicker() {
+    final List<Map<String, String>> languages = [
+      {'name': 'English (United States)', 'code': 'en_US', 'flag': '🇺🇸'},
+      {'name': 'English (United Kingdom)', 'code': 'en_GB', 'flag': '🇬🇧'},
+      {'name': 'English (Canada)', 'code': 'en_CA', 'flag': '🇨🇦'},
+      {'name': 'English (Australia)', 'code': 'en_AU', 'flag': '🇦🇺'},
+      {'name': 'বাংলা (Bangladesh)', 'code': 'bn_BD', 'flag': '🇧🇩'},
+      {'name': 'বাংলা (ভারত / India)', 'code': 'bn_IN', 'flag': '🇮🇳'},
+      {'name': 'हिन्दी (India)', 'code': 'hi_IN', 'flag': '🇮🇳'},
+      {'name': 'اردو (Pakistan)', 'code': 'ur_PK', 'flag': '🇵🇰'},
+      {'name': 'العربية (Saudi Arabia)', 'code': 'ar_SA', 'flag': '🇸🇦'},
+      {'name': 'Español (Spain)', 'code': 'es_ES', 'flag': '🇪🇸'},
+      {'name': 'Français (France)', 'code': 'fr_FR', 'flag': '🇫🇷'},
+      {'name': 'Deutsch (Germany)', 'code': 'de_DE', 'flag': '🇩🇪'},
+      {'name': '日本語 (Japan)', 'code': 'ja_JP', 'flag': '🇯🇵'},
+      {'name': '한국어 (South Korea)', 'code': 'ko_KR', 'flag': '🇰🇷'},
+    ];
+
+    String searchQuery = '';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filteredLanguages = languages
+                .where((lang) =>
+                    lang['name']!
+                        .toLowerCase()
+                        .contains(searchQuery.toLowerCase()) ||
+                    lang['code']!
+                        .toLowerCase()
+                        .contains(searchQuery.toLowerCase()))
+                .toList();
+
+            return AlertDialog(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('বিশ্বের সকল ভাষা / Select Language'),
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search language / ভাষা খুঁজুন...',
+                      prefixIcon: const Icon(Icons.search),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.all(10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        searchQuery = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 350,
+                child: filteredLanguages.isEmpty
+                    ? const Center(child: Text('কোনো ভাষা পাওয়া যায়নি!'))
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredLanguages.length,
+                        itemBuilder: (context, index) {
+                          final lang = filteredLanguages[index];
+                          return ListTile(
+                            leading: Text(lang['flag']!,
+                                style: const TextStyle(fontSize: 22)),
+                            title: Text(lang['name']!),
+                            subtitle: Text('Code: ${lang['code']}'),
+                            trailing: _selectedLanguage == lang['name']
+                                ? const Icon(Icons.check_circle,
+                                    color: Color(0xFF5352ED))
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                _selectedLanguage = lang['name']!;
+                              });
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'ভাষা নির্ধারণ করা হয়েছে: ${lang['name']}')),
+                              );
+                            },
+                          );
+                        },
+                      ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openManagePostsDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('ম্যানেজ পোস্ট (Manage Posts)',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  widget.userPosts.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(20.0),
+                          child: Center(child: Text('আপনার ডিলিট করার মতো কোনো পোস্ট নেই।')),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: widget.userPosts.length,
+                          itemBuilder: (context, i) {
+                            final p = widget.userPosts[i];
+                            return ListTile(
+                              title: Text(p.postText, maxLines: 1),
+                              subtitle: Text(p.timeAgo),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                onPressed: () {
+                                  widget.onDeletePost(p.id);
+                                  setModalState(() {
+                                    widget.userPosts.removeAt(i);
+                                  });
+                                  setState(() {});
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('পোস্টটি ডিলিট করা হয়েছে!')),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('সেটিং এন্ড প্রাইভেসি'),
+        backgroundColor: const Color(0xFF5352ED),
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        children: [
+          const ListTile(
+            title: Text('ভাষা ও অঞ্চল (Language & Region)',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5352ED))),
+          ),
+          ListTile(
+            leading: const Icon(Icons.language, color: Color(0xFF5352ED)),
+            title: const Text('অ্যাপের ভাষা নির্বাচন করুন (World Languages)'),
+            subtitle: Text(_selectedLanguage),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _openLanguagePicker,
+          ),
+          const Divider(),
+
+          const ListTile(
+            title: Text('কন্টেন্ট ও পোস্ট ম্যানেজমেন্ট',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5352ED))),
+          ),
+          ListTile(
+            leading: const Icon(Icons.article_outlined),
+            title: const Text('ম্যানেজ পোস্ট (Manage Posts)'),
+            subtitle: const Text('প্রকাশিত পোস্ট ডিলিট বা এডিট করতে ট্যাপ করুন'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _openManagePostsDialog,
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.brightness_medium),
+            title: const Text('কন্টেন্ট প্রিপারেশন ও ডিমিং সিস্টেম'),
+            subtitle: Text('ডিমিং পারসেন্টেজ: ${_dimmingLevel.toInt()}%'),
+            value: _isDimmingEnabled,
+            onChanged: (val) => setState(() => _isDimmingEnabled = val),
+          ),
+          if (_isDimmingEnabled)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Slider(
+                value: _dimmingLevel,
+                min: 0,
+                max: 100,
+                activeColor: const Color(0xFF5352ED),
+                onChanged: (val) => setState(() => _dimmingLevel = val),
+              ),
+            ),
+          const Divider(),
+
+          const ListTile(
+            title: Text('প্রাইভেসি ও সিকিউরিটি',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5352ED))),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.location_on_outlined),
+            title: const Text('লোকেশন পারমিশন (Location Services)'),
+            subtitle: const Text('পোস্টে লোকেশন তথ্য শেয়ারিং অপশন'),
+            value: _isLocationAllowed,
+            onChanged: (val) => setState(() => _isLocationAllowed = val),
+          ),
+        ],
+      ),
+    );
+  }
+}

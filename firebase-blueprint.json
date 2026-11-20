@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "UserPublicProfile": {
+      "title": "UserPublicProfile",
+      "description": "Publicly readable non-PII user identity and profile customization.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID matching path userId" },
+        "name": { "type": "string", "description": "Display name" },
+        "customUserId": { "type": "string", "description": "Unique handle identifier" },
+        "handle": { "type": "string", "description": "@handle string" },
+        "bio": { "type": "string", "description": "User biography" },
+        "followersCount": { "type": "string", "description": "Followers display count (default '0')" },
+        "profileCreated": { "type": "boolean", "description": "Whether onboarding registration is completed" },
+        "coverColorHex": { "type": "number", "description": "ARGB hex color for cover banner" },
+        "avatarColorHex": { "type": "number", "description": "ARGB hex color for avatar" },
+        "coverImageUri": { "type": "string", "description": "Optional cover image URI" },
+        "avatarImageUri": { "type": "string", "description": "Optional avatar image URI" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "name",
+        "customUserId",
+        "handle",
+        "bio",
+        "followersCount",
+        "profileCreated",
+        "coverColorHex",
+        "avatarColorHex",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Owner-only PII contact info isolated from public profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "phoneNumber", "createdAt", "updatedAt"]
+    },
+    "UserPost": {
+      "title": "UserPost",
+      "description": "User feed post or Waves reel entry.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "userName": { "type": "string" },
+        "postText": { "type": "string" },
+        "mediaUri": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["text", "camera", "gallery", "reels", "gradient"] },
+        "thumbnailUri": { "type": "string" },
+        "video": { "type": "boolean" },
+        "likeCount": { "type": "integer" },
+        "liked": { "type": "boolean" },
+        "comments": { "type": "array", "items": { "type": "string" } },
+        "userPost": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "userName",
+        "postText",
+        "mediaType",
+        "video",
+        "likeCount",
+        "liked",
+        "comments",
+        "userPost",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FriendRelation": {
+      "title": "FriendRelation",
+      "description": "Friend connection, incoming/outgoing request, or suggestion for a user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "handle": { "type": "string" },
+        "bio": { "type": "string" },
+        "mutualFriendsCount": { "type": "integer" },
+        "avatarColorHex": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "online": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["FRIEND", "INCOMING_REQUEST", "OUTGOING_REQUEST", "SUGGESTION"] },
+        "requestTimeAgo": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "name",
+        "handle",
+        "bio",
+        "mutualFriendsCount",
+        "avatarColorHex",
+        "verified",
+        "online",
+        "status",
+        "requestTimeAgo",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ReviewItem": {
+      "title": "ReviewItem",
+      "description": "User review with moderation status control and pinning.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "authorUserId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "status": { "type": "string", "enum": ["APPROVED", "PENDING", "HIDDEN"] },
+        "pinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "authorUserId",
+        "userName",
+        "rating",
+        "comment",
+        "status",
+        "pinned",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/public/profile": {
+      "schema": { "$ref": "#/entities/UserPublicProfile" },
+      "description": "User public profile document"
+    },
+    "/users/{userId}/private/info": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Owner-only PII contact info document"
+    },
+    "/users/{userId}/posts/{postId}": {
+      "schema": { "$ref": "#/entities/UserPost" },
+      "description": "User-scoped posts and reels"
+    },
+    "/users/{userId}/friends/{friendId}": {
+      "schema": { "$ref": "#/entities/FriendRelation" },
+      "description": "User-scoped friends and friend requests"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/ReviewItem" },
+      "description": "User reviews with status control"
+    }
+  }
+}
