@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.LocalAccount
+import com.example.data.LocalAccountStore
 import com.example.data.LocalRepository
 import com.example.model.FriendStatus
 import com.example.model.PostModel
@@ -127,9 +129,13 @@ class MainActivity : ComponentActivity() {
             }
 
             val signedInUser = currentUser
+            val accountStore = remember(context) { LocalAccountStore(context) }
+            var activeLocalAccount by remember {
+                mutableStateOf<LocalAccount?>(accountStore.getActiveAccount())
+            }
             var bypassAuth by remember { mutableStateOf(false) }
 
-            if (signedInUser == null && !bypassAuth) {
+            if (signedInUser == null && activeLocalAccount == null && !bypassAuth) {
                 val preAuthSettings = remember { LocalRepository(context).loadSettings() }
                 val preAuthStrings = remember(preAuthSettings.selectedLanguageCode) {
                     AppStringsRegistry.forCode(preAuthSettings.selectedLanguageCode)
@@ -155,6 +161,10 @@ class MainActivity : ComponentActivity() {
                                     null
                                 }
                             },
+                            onLocalAuthSuccess = { account ->
+                                bypassAuth = false
+                                activeLocalAccount = account
+                            },
                             onCancelAndUsePlatform = {
                                 bypassAuth = true
                             }
@@ -162,16 +172,18 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             } else {
-                val uid = signedInUser?.uid ?: "guest"
+                val uid = signedInUser?.uid ?: activeLocalAccount?.id ?: "guest"
                 key(uid) {
                     val viewModel: PlatformViewModel = viewModel(key = uid)
-                    LaunchedEffect(signedInUser?.uid) {
+                    LaunchedEffect(signedInUser?.uid, activeLocalAccount?.id) {
                         if (signedInUser != null) {
                             viewModel.bindAuthenticatedUser(
                                 uid = signedInUser.uid,
                                 googleDisplayName = signedInUser.displayName,
                                 googleEmail = signedInUser.email
                             )
+                        } else if (activeLocalAccount != null) {
+                            viewModel.bindLocalAccount(activeLocalAccount!!)
                         }
                     }
 
@@ -196,6 +208,8 @@ class MainActivity : ComponentActivity() {
                     val authScope = rememberCoroutineScope()
 
                     val performLogOut: () -> Unit = {
+                        accountStore.logoutLocalAccount()
+                        activeLocalAccount = null
                         GoogleAuthHelper.signOut(
                             credentialManager = credentialManager,
                             scope = authScope,
@@ -213,11 +227,15 @@ class MainActivity : ComponentActivity() {
                     ) {
                         MyApplicationTheme(darkTheme = settings.isDarkMode) {
                             val currentStrings = LocalAppStrings.current
+                            val resolvedSignedIn = signedInUser != null || activeLocalAccount != null
+                            val resolvedContact = signedInUser?.email ?: activeLocalAccount?.contact.orEmpty()
+                            val resolvedDisplayName = signedInUser?.displayName
+                                ?: activeLocalAccount?.fullName.orEmpty()
                             MainAppContent(
                                 viewModel = viewModel,
-                                signedInEmail = signedInUser?.email.orEmpty(),
-                                signedInDisplayName = signedInUser?.displayName.orEmpty(),
-                                isSignedIn = signedInUser != null,
+                                signedInEmail = resolvedContact,
+                                signedInDisplayName = resolvedDisplayName,
+                                isSignedIn = resolvedSignedIn,
                                 onRequestSignIn = { bypassAuth = false },
                                 onLogOut = performLogOut,
                                 onShareText = { text ->
@@ -458,6 +476,8 @@ fun MainAppContent(
                         when (tab) {
                             0 -> HomeScreen(
                                 posts = posts,
+                                userAvatarUri = userProfile.avatarImageUri,
+                                userAvatarColorHex = userProfile.avatarColorHex,
                                 uploadState = uploadState,
                                 friendsCount = friendsCount,
                                 pendingRequestCount = pendingFriendRequestCount,
@@ -518,6 +538,8 @@ fun MainAppContent(
                                 searchQuery = searchQuery,
                                 onQueryChange = { viewModel.setSearchQuery(it) },
                                 posts = posts,
+                                userAvatarUri = userProfile.avatarImageUri,
+                                userAvatarColorHex = userProfile.avatarColorHex,
                                 friends = friends,
                                 onSendFriendRequest = { user ->
                                     viewModel.sendFriendRequest(user.id)

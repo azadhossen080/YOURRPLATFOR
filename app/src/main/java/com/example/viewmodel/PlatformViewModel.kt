@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AiRepository
 import com.example.data.FirestoreRepository
+import com.example.data.LocalAccount
 import com.example.data.LocalRepository
 import com.example.model.AppSettings
 import com.example.model.FriendStatus
@@ -255,6 +256,32 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                     repository.saveReviews(remoteReviews)
                 }
         }
+    }
+
+    fun bindLocalAccount(account: LocalAccount) {
+        cancelFirestoreListeners()
+        activeUid = account.id
+        _cloudSyncState.value = FirestoreSyncState.Idle
+
+        val current = _userProfile.value
+        val updated = if (current.authUid == account.id && current.isProfileCreated) {
+            current
+        } else {
+            UserProfile(
+                name = account.fullName.ifBlank { "Guest User" },
+                userId = account.userId,
+                handle = "@${account.userId}",
+                bio = if (current.authUid == account.id) current.bio else "",
+                email = if (account.isEmailContact) account.contact else "",
+                phoneNumber = if (!account.isEmailContact) account.contact else "",
+                authUid = account.id,
+                followersCount = "0",
+                isProfileCreated = true,
+                createdAtTimestamp = account.createdAt
+            )
+        }
+        _userProfile.value = updated
+        repository.saveProfile(updated)
     }
 
     fun prepareForSignOut() {
@@ -519,6 +546,12 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             _userProfile.value = updated
             repository.saveProfile(updated)
             syncProfileToFirestore(updated)
+            if (!savedUri.isNullOrBlank()) {
+                publishProfileMediaPost(
+                    postText = currentStrings().updatedCoverPhotoPost,
+                    mediaUri = savedUri
+                )
+            }
         }
     }
 
@@ -543,6 +576,36 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             _userProfile.value = updated
             repository.saveProfile(updated)
             syncProfileToFirestore(updated)
+            if (!savedUri.isNullOrBlank()) {
+                publishProfileMediaPost(
+                    postText = currentStrings().updatedProfilePicturePost,
+                    mediaUri = savedUri
+                )
+            }
+        }
+    }
+
+    private suspend fun publishProfileMediaPost(postText: String, mediaUri: String) {
+        val profile = _userProfile.value
+        val feedPost = PostModel(
+            id = UUID.randomUUID().toString(),
+            userName = profile.name,
+            timeAgo = currentStrings().justNow,
+            postText = postText,
+            mediaUri = mediaUri,
+            mediaType = "gallery",
+            thumbnailUri = mediaUri,
+            isVideo = false,
+            likeCount = 0,
+            isLiked = false,
+            comments = emptyList(),
+            isUserPost = true
+        )
+        val updatedPosts = listOf(feedPost) + _posts.value
+        _posts.value = updatedPosts
+        repository.savePosts(updatedPosts)
+        if (signedInUid() != null) {
+            firestoreRepo?.savePost(feedPost)
         }
     }
 

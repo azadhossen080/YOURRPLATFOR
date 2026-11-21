@@ -75,6 +75,8 @@ fun PostCardItem(
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
     onDeleteClick: (() -> Unit)? = null,
+    authorAvatarUri: String? = null,
+    authorAvatarColorHex: Long? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -103,15 +105,26 @@ fun PostCardItem(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(BrandPrimary),
+                        .background(authorAvatarColorHex?.let { Color(it) } ?: BrandPrimary),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = post.userName.take(1),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    if (!authorAvatarUri.isNullOrBlank()) {
+                        AsyncImage(
+                            model = authorAvatarUri,
+                            contentDescription = post.userName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = post.userName.take(1),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))

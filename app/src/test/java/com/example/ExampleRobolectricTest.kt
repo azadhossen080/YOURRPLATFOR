@@ -254,4 +254,108 @@ class ExampleRobolectricTest {
         assertEquals(0, viewModel.selectedTab.value)
         assertTrue(viewModel.cloudSyncState.value is com.example.viewmodel.FirestoreSyncState.Idle)
     }
+
+    @Test
+    fun `local account create login verification captcha and viewModel binding work`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        app.getSharedPreferences(com.example.data.LocalAccountStore.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().clear().commit()
+        app.getSharedPreferences("yourplatform_prefs", Context.MODE_PRIVATE).edit().clear().commit()
+
+        val store = com.example.data.LocalAccountStore(app)
+        val code = com.example.data.LocalAccountStore.generateVerificationCode()
+        assertEquals(6, code.length)
+        assertTrue(code.all { it.isDigit() })
+
+        val captcha = com.example.data.LocalAccountStore.generateCaptchaCode()
+        assertEquals(5, captcha.length)
+        assertTrue(captcha.all { it.isLetterOrDigit() })
+
+        assertTrue(com.example.data.LocalAccountStore.isValidContact("+880 1712-345678"))
+        assertTrue(com.example.data.LocalAccountStore.isValidContact("user@example.com"))
+        assertFalse(com.example.data.LocalAccountStore.isValidContact("not_valid"))
+
+        val created = store.registerAccount(
+            firstName = "Tasnim",
+            lastName = "Karim",
+            contact = "+8801712345678",
+            rawPassword = "StrongPass123"
+        )
+        assertTrue(created is com.example.data.AccountAuthResult.Success)
+        val account = (created as com.example.data.AccountAuthResult.Success).account
+        assertEquals("Tasnim Karim", account.fullName)
+        assertNotNull(store.getActiveAccount())
+
+        // Verify password is not stored in plaintext
+        val rawAccountsJson = app.getSharedPreferences(
+            com.example.data.LocalAccountStore.PREFS_NAME,
+            Context.MODE_PRIVATE
+        ).getString("accounts_json", "") ?: ""
+        assertFalse(rawAccountsJson.contains("StrongPass123"))
+
+        // Duplicate contact rejected
+        val dup = store.registerAccount("Another", "User", "+880 1712-345678", "AnotherPass1")
+        assertTrue(dup is com.example.data.AccountAuthResult.DuplicateAccount)
+
+        // Logout clears active session
+        store.logoutLocalAccount()
+        assertEquals(null, store.getActiveAccount())
+
+        // Wrong password rejected, right password (formatted phone) succeeds
+        val wrong = store.authenticate("+8801712345678", "WrongPassword")
+        assertTrue(wrong is com.example.data.AccountAuthResult.InvalidCredentials)
+
+        val valid = store.authenticate("+880 1712-345678", "StrongPass123")
+        assertTrue(valid is com.example.data.AccountAuthResult.Success)
+
+        val vm = PlatformViewModel(app)
+        vm.bindLocalAccount(account)
+        assertEquals("Tasnim Karim", vm.userProfile.value.name)
+        assertEquals("+8801712345678", vm.userProfile.value.phoneNumber)
+        assertTrue(vm.userProfile.value.isProfileCreated)
+    }
+
+    @Test
+    fun `profile picture and cover photo changes publish to profile feed`() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        app.getSharedPreferences("yourplatform_prefs", Context.MODE_PRIVATE).edit().clear().commit()
+        val viewModel = PlatformViewModel(app)
+        viewModel.createOrUpdateIdentity("Tariqul Islam", "tariq_2026")
+        val initialPosts = viewModel.posts.value.size
+
+        val avatarImg = File(app.cacheDir, "test_avatar_${System.currentTimeMillis()}.jpg")
+        val coverImg = File(app.cacheDir, "test_cover_${System.currentTimeMillis()}.jpg")
+        listOf(avatarImg, coverImg).forEach { file ->
+            val bmp = Bitmap.createBitmap(80, 80, Bitmap.Config.ARGB_8888)
+            FileOutputStream(file).use { out -> bmp.compress(Bitmap.CompressFormat.JPEG, 90, out) }
+            bmp.recycle()
+        }
+
+        viewModel.updateAvatarUri(Uri.fromFile(avatarImg).toString())
+        val mainLooper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+        repeat(20) {
+            if (viewModel.posts.value.size > initialPosts) return@repeat
+            mainLooper.idleFor(java.time.Duration.ofMillis(100))
+            delay(50)
+        }
+
+        assertEquals(initialPosts + 1, viewModel.posts.value.size)
+        val avatarPost = viewModel.posts.value.first()
+        assertTrue(avatarPost.isUserPost)
+        assertNotNull(avatarPost.mediaUri)
+        assertEquals(viewModel.userProfile.value.avatarImageUri, avatarPost.mediaUri)
+
+        viewModel.updateCoverUri(Uri.fromFile(coverImg).toString())
+        repeat(20) {
+            if (viewModel.posts.value.size > initialPosts + 1) return@repeat
+            mainLooper.idleFor(java.time.Duration.ofMillis(100))
+            delay(50)
+        }
+
+        assertEquals(initialPosts + 2, viewModel.posts.value.size)
+        val coverPost = viewModel.posts.value.first()
+        assertTrue(coverPost.isUserPost)
+        assertNotNull(coverPost.mediaUri)
+        assertEquals(viewModel.userProfile.value.coverImageUri, coverPost.mediaUri)
+    }
 }

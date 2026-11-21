@@ -573,7 +573,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = if (isSignedIn) strings.auth.signedInWithGoogleLabel else strings.auth.guestModeLabel,
+                                text = if (isSignedIn) strings.auth.signedInAccountLabel else strings.auth.guestModeLabel,
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     color = BrandPrimary,
                                     fontWeight = FontWeight.Bold
@@ -581,7 +581,7 @@ fun SettingsScreen(
                             )
                             if (isSignedIn) {
                                 Text(
-                                    text = signedInEmail.ifBlank { "Google Account" },
+                                    text = signedInEmail.ifBlank { strings.auth.signedInWithGoogleLabel },
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                                 )
                             }

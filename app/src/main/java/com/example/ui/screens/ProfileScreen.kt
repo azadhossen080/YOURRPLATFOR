@@ -160,9 +160,11 @@ fun ProfileScreen(
         if (uri != null) {
             if (isEditingCover) {
                 onUpdateCoverUri(uri.toString())
+                selectedTab = 0
                 onShowSnackbar(strings.coverUpdatedSnackbar)
             } else {
                 onUpdateAvatarUri(uri.toString())
+                selectedTab = 0
                 onShowSnackbar(strings.avatarUpdatedSnackbar)
             }
         }
@@ -175,9 +177,11 @@ fun ProfileScreen(
             val uri = saveBitmapToCache(bitmap, if (isEditingCover) "cover" else "avatar")
             if (isEditingCover) {
                 onUpdateCoverUri(uri)
+                selectedTab = 0
                 onShowSnackbar(strings.coverUpdatedSnackbar)
             } else {
                 onUpdateAvatarUri(uri)
+                selectedTab = 0
                 onShowSnackbar(strings.avatarUpdatedSnackbar)
             }
         }
@@ -681,6 +685,8 @@ fun ProfileScreen(
                             onCommentClick = { onCommentPost(post) },
                             onShareClick = { onSharePost(post) },
                             onDeleteClick = { onDeletePost(post.id) },
+                            authorAvatarUri = userProfile.avatarImageUri,
+                            authorAvatarColorHex = userProfile.avatarColorHex,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
                     }

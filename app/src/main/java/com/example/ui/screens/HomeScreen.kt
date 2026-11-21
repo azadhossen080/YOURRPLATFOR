@@ -59,6 +59,8 @@ fun HomeScreen(
     uploadState: PostUploadState,
     friendsCount: Int,
     pendingRequestCount: Int,
+    userAvatarUri: String? = null,
+    userAvatarColorHex: Long? = null,
     onRetryUpload: () -> Unit,
     onDismissUpload: () -> Unit,
     onOpenFriends: () -> Unit,
@@ -338,6 +340,8 @@ fun HomeScreen(
                 onCommentClick = { onCommentPost(post) },
                 onShareClick = { onSharePost(post) },
                 onDeleteClick = if (post.isUserPost) { { onDeletePost(post.id) } } else null,
+                authorAvatarUri = if (post.isUserPost) userAvatarUri else null,
+                authorAvatarColorHex = if (post.isUserPost) userAvatarColorHex else null,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
         }

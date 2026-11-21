@@ -63,6 +63,8 @@ fun SearchScreen(
     onQueryChange: (String) -> Unit,
     posts: List<PostModel>,
     friends: List<FriendUser>,
+    userAvatarUri: String? = null,
+    userAvatarColorHex: Long? = null,
     onAcceptFriendRequest: (FriendUser) -> Unit,
     onSendFriendRequest: (FriendUser) -> Unit,
     onCancelFriendRequest: (FriendUser) -> Unit,
@@ -328,6 +330,8 @@ fun SearchScreen(
                         onCommentClick = { onCommentPost(post) },
                         onShareClick = { onSharePost(post) },
                         onDeleteClick = if (post.isUserPost) { { onDeletePost(post.id) } } else null,
+                        authorAvatarUri = if (post.isUserPost) userAvatarUri else null,
+                        authorAvatarColorHex = if (post.isUserPost) userAvatarColorHex else null,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                 }
