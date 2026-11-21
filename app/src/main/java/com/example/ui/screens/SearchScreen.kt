@@ -73,6 +73,7 @@ fun SearchScreen(
     onCommentPost: (PostModel) -> Unit,
     onSharePost: (PostModel) -> Unit,
     onDeletePost: (String) -> Unit,
+    onOpenPostInWaves: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -330,6 +331,9 @@ fun SearchScreen(
                         onCommentClick = { onCommentPost(post) },
                         onShareClick = { onSharePost(post) },
                         onDeleteClick = if (post.isUserPost) { { onDeletePost(post.id) } } else null,
+                        onOpenInWaves = if (post.isVideo || post.mediaType == "reels" || post.mediaType == "live" || post.isLiveStream) {
+                            { onOpenPostInWaves(post.id) }
+                        } else null,
                         authorAvatarUri = if (post.isUserPost) userAvatarUri else null,
                         authorAvatarColorHex = if (post.isUserPost) userAvatarColorHex else null,
                         modifier = Modifier.padding(bottom = 12.dp)

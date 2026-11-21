@@ -86,12 +86,12 @@ fun AppHeader(
             IconButton(
                 onClick = onAiStudioClick,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .testTag("ai_studio_header_button")
             ) {
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
@@ -104,7 +104,7 @@ fun AppHeader(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = strings.aiStudioDesc,
                         tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -112,7 +112,7 @@ fun AppHeader(
             IconButton(
                 onClick = onFriendsClick,
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(48.dp)
                     .testTag("friends_header_button")
             ) {
                 BadgedBox(
@@ -135,7 +135,7 @@ fun AppHeader(
                         imageVector = Icons.Outlined.Group,
                         contentDescription = strings.friendsRequestsDesc,
                         tint = BrandPrimary,
-                        modifier = Modifier.size(25.dp)
+                        modifier = Modifier.size(27.dp)
                     )
                 }
             }
@@ -143,7 +143,7 @@ fun AppHeader(
             IconButton(
                 onClick = onNotificationClick,
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(48.dp)
                     .testTag("notification_button")
             ) {
                 BadgedBox(
@@ -166,7 +166,7 @@ fun AppHeader(
                         imageVector = Icons.Outlined.Notifications,
                         contentDescription = strings.notificationsDesc,
                         tint = BrandPrimary,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(27.dp)
                     )
                 }
             }

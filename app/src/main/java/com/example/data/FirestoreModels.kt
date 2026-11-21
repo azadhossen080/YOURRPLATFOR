@@ -243,8 +243,9 @@ object FirestorePayloadMapper {
     }
 
     fun toPostCreateMap(uid: String, post: PostModel): Map<String, Any> {
-        val allowedType = if (post.mediaType in listOf("text", "camera", "gallery", "reels", "gradient")) {
-            post.mediaType
+        val normalizedType = if (post.mediaType == "live") "reels" else post.mediaType
+        val allowedType = if (normalizedType in listOf("text", "camera", "gallery", "reels", "gradient")) {
+            normalizedType
         } else {
             "text"
         }

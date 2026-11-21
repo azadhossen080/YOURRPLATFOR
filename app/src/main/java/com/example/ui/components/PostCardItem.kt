@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import android.net.Uri
+import android.os.Build
 import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.animation.animateColorAsState
@@ -11,11 +12,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,15 +29,18 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,6 +69,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.R
+import com.example.model.ColorFilterMode
 import com.example.model.PostModel
 import com.example.ui.theme.BrandAccent
 import com.example.ui.theme.BrandPrimary
@@ -75,6 +82,7 @@ fun PostCardItem(
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
     onDeleteClick: (() -> Unit)? = null,
+    onOpenInWaves: (() -> Unit)? = null,
     authorAvatarUri: String? = null,
     authorAvatarColorHex: Long? = null,
     modifier: Modifier = Modifier
@@ -82,6 +90,9 @@ fun PostCardItem(
     val strings = LocalAppStrings.current
     var menuExpanded by remember { mutableStateOf(false) }
     var showMediaViewer by remember { mutableStateOf(false) }
+
+    val colorFilterMode = remember(post.colorFilter) { ColorFilterMode.fromId(post.colorFilter) }
+    val isReelOrVideo = post.isVideo || post.mediaType == "reels" || post.mediaType == "live" || post.isLiveStream
 
     Card(
         modifier = modifier
@@ -143,11 +154,38 @@ fun PostCardItem(
                     )
                 }
 
+                if (isReelOrVideo && onOpenInWaves != null) {
+                    FilledTonalButton(
+                        onClick = onOpenInWaves,
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = BrandPrimary.copy(alpha = 0.14f),
+                            contentColor = BrandPrimary
+                        ),
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("watch_in_waves_${post.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VideoLibrary,
+                            contentDescription = strings.mediaStudio.watchInWavesBtn,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = strings.mediaStudio.watchInWavesBtn,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
                 if (onDeleteClick != null) {
                     Box {
                         IconButton(
                             onClick = { menuExpanded = true },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
@@ -229,6 +267,14 @@ fun PostCardItem(
                             )
                         }
                     }
+                    AppliedMediaDecorationsOverlay(
+                        colorFilterId = post.colorFilter,
+                        transitionEffectId = post.transitionEffect,
+                        mojiStickers = post.mojiStickers,
+                        isLiveStream = post.isLiveStream,
+                        playbackSpeed = post.playbackSpeed,
+                        isMuted = post.isMuted
+                    )
                 }
             } else if (!post.mediaUri.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -239,28 +285,35 @@ fun PostCardItem(
                         .height(210.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF1E1E2C))
-                        .clickable { showMediaViewer = true },
+                        .clickable {
+                            if (isReelOrVideo && onOpenInWaves != null) {
+                                onOpenInWaves()
+                            } else {
+                                showMediaViewer = true
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
                         model = displayModel,
                         contentDescription = "Post Media",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        colorFilter = colorFilterMode.colorFilter()
                     )
 
-                    if (post.isVideo || post.mediaType == "reels") {
+                    if (isReelOrVideo) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.28f))
+                                .background(Color.Black.copy(alpha = 0.25f))
                         )
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Filled.PlayCircleFilled,
                                 contentDescription = strings.tapToPlayVideo,
-                                tint = Color.White.copy(alpha = 0.92f),
-                                modifier = Modifier.size(54.dp)
+                                tint = Color.White.copy(alpha = 0.94f),
+                                modifier = Modifier.size(56.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -295,32 +348,55 @@ fun PostCardItem(
                             )
                         }
                     }
+
+                    AppliedMediaDecorationsOverlay(
+                        colorFilterId = post.colorFilter,
+                        transitionEffectId = post.transitionEffect,
+                        mojiStickers = post.mojiStickers,
+                        isLiveStream = post.isLiveStream,
+                        playbackSpeed = post.playbackSpeed,
+                        isMuted = post.isMuted
+                    )
                 }
-            } else if (post.mediaType == "reels") {
+            } else if (isReelOrVideo) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)
+                        .height(160.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF232338)),
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF1F1D36), BrandPrimary.copy(alpha = 0.85f))
+                            )
+                        )
+                        .clickable { onOpenInWaves?.invoke() },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Filled.PlayCircleFilled,
                             contentDescription = "Reels",
-                            tint = BrandPrimary,
-                            modifier = Modifier.size(44.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = strings.wavesReelContent,
+                            text = if (post.isLiveStream) strings.mediaStudio.liveBadge else strings.wavesReelContent,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
                     }
+
+                    AppliedMediaDecorationsOverlay(
+                        colorFilterId = post.colorFilter,
+                        transitionEffectId = post.transitionEffect,
+                        mojiStickers = post.mojiStickers,
+                        isLiveStream = post.isLiveStream,
+                        playbackSpeed = post.playbackSpeed,
+                        isMuted = post.isMuted
+                    )
                 }
             }
 
@@ -346,7 +422,9 @@ fun PostCardItem(
 
                 TextButton(
                     onClick = onLikeClick,
-                    modifier = Modifier.testTag("post_like_button_${post.id}")
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("post_like_button_${post.id}")
                 ) {
                     Icon(
                         imageVector = if (post.isLiked) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
@@ -364,7 +442,9 @@ fun PostCardItem(
 
                 TextButton(
                     onClick = onCommentClick,
-                    modifier = Modifier.testTag("post_comment_button_${post.id}")
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("post_comment_button_${post.id}")
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ChatBubbleOutline,
@@ -382,7 +462,9 @@ fun PostCardItem(
 
                 TextButton(
                     onClick = onShareClick,
-                    modifier = Modifier.testTag("post_share_button_${post.id}")
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("post_share_button_${post.id}")
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Share,
@@ -424,6 +506,18 @@ fun PostCardItem(
                                     setMediaController(controller)
                                     setOnPreparedListener { mp ->
                                         mp.isLooping = true
+                                        val vol = if (post.isMuted) 0f else 1f
+                                        mp.setVolume(vol, vol)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && post.playbackSpeed != 1f) {
+                                            try {
+                                                mp.playbackParams = mp.playbackParams.setSpeed(post.playbackSpeed)
+                                            } catch (_: Exception) {
+                                            }
+                                        }
+                                        val duration = mp.duration
+                                        if (duration > 0 && post.trimStartFraction > 0f) {
+                                            seekTo((duration * post.trimStartFraction).toInt())
+                                        }
                                         start()
                                     }
                                 }
@@ -439,16 +533,26 @@ fun PostCardItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(380.dp),
-                            contentScale = ContentScale.Fit
+                            contentScale = ContentScale.Fit,
+                            colorFilter = colorFilterMode.colorFilter()
                         )
                     }
+
+                    AppliedMediaDecorationsOverlay(
+                        colorFilterId = post.colorFilter,
+                        transitionEffectId = post.transitionEffect,
+                        mojiStickers = post.mojiStickers,
+                        isLiveStream = post.isLiveStream,
+                        playbackSpeed = post.playbackSpeed,
+                        isMuted = post.isMuted
+                    )
 
                     IconButton(
                         onClick = { showMediaViewer = false },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
-                            .size(36.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(Color.Black.copy(alpha = 0.65f))
                     ) {

@@ -289,6 +289,7 @@ fun MainAppContent(
     var showEditIdentityDialog by remember { mutableStateOf(false) }
     var bypassRegistration by remember { mutableStateOf(false) }
     var createPostInitialText by remember { mutableStateOf("") }
+    var createPostInitialMode by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -302,6 +303,7 @@ fun MainAppContent(
     val lastExportPath by viewModel.lastExportPath.collectAsState()
     val lastExportTimestamp by viewModel.lastExportTimestamp.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val activeReelPostId by viewModel.activeReelPostId.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val uploadState by viewModel.uploadState.collectAsState()
 
@@ -479,20 +481,18 @@ fun MainAppContent(
                                 userAvatarUri = userProfile.avatarImageUri,
                                 userAvatarColorHex = userProfile.avatarColorHex,
                                 uploadState = uploadState,
-                                friendsCount = friendsCount,
-                                pendingRequestCount = pendingFriendRequestCount,
                                 onRetryUpload = {
                                     viewModel.retryLastUpload {
                                         showSnackbar(strings.postPublishedSnackbar)
                                     }
                                 },
                                 onDismissUpload = { viewModel.dismissUploadState() },
-                                onOpenFriends = { activeSubScreen = SubScreen.FRIENDS },
-                                onOpenCreatePost = { viewModel.setSelectedTab(2) },
-                                onJoinCommunity = { onOpenUrl(LocalRepository.COMMUNITY_TELEGRAM_URL) },
-                                onCopyCommunityUrl = {
-                                    onCopyText(LocalRepository.COMMUNITY_TELEGRAM_URL)
-                                    showSnackbar(strings.community.communityCopiedSnackbar)
+                                onOpenCreatePost = { mode ->
+                                    createPostInitialMode = mode
+                                    viewModel.setSelectedTab(2)
+                                },
+                                onOpenPostInWaves = { postId ->
+                                    viewModel.openReelInWaves(postId)
                                 },
                                 onLikePost = { viewModel.toggleLike(it) },
                                 onCommentPost = { post -> activeCommentPost = post },
@@ -504,7 +504,21 @@ fun MainAppContent(
                             )
 
                             1 -> WavesScreen(
-                                onShareReel = { text -> onShareText(text) }
+                                posts = posts,
+                                userProfile = userProfile,
+                                focusedPostId = activeReelPostId,
+                                selectedLanguageCode = settings.selectedLanguageCode,
+                                onLikePost = { viewModel.toggleLike(it) },
+                                onCommentPost = { post -> activeCommentPost = post },
+                                onSharePost = { post ->
+                                    onCopyText("https://yourplatform.app/post/${post.id}")
+                                    showSnackbar(strings.postLinkCopied)
+                                },
+                                onShareReelText = { text -> onShareText(text) },
+                                onOpenReelsCreator = { mode ->
+                                    createPostInitialMode = mode
+                                    viewModel.setSelectedTab(2)
+                                }
                             )
 
                             2 -> CreatePostScreen(
@@ -512,12 +526,15 @@ fun MainAppContent(
                                 uploadState = uploadState,
                                 selectedLanguageCode = settings.selectedLanguageCode,
                                 initialText = createPostInitialText,
-                                onSubmitPost = { text, type, uri, previewUri ->
+                                initialStudioMode = createPostInitialMode,
+                                onConsumeInitialStudioMode = { createPostInitialMode = null },
+                                onSubmitPost = { text, type, uri, previewUri, editDraft ->
                                     viewModel.submitPost(
                                         text = text,
                                         type = type,
                                         mediaUri = uri,
                                         previewUri = previewUri,
+                                        editDraft = editDraft,
                                         onPublished = {
                                             createPostInitialText = ""
                                             showSnackbar(strings.postPublishedSnackbar)
@@ -560,7 +577,8 @@ fun MainAppContent(
                                     onCopyText("https://yourplatform.app/post/${post.id}")
                                     showSnackbar(strings.postLinkCopied)
                                 },
-                                onDeletePost = { viewModel.deletePost(it) }
+                                onDeletePost = { viewModel.deletePost(it) },
+                                onOpenPostInWaves = { postId -> viewModel.openReelInWaves(postId) }
                             )
 
                             4 -> ProfileScreen(
@@ -574,6 +592,7 @@ fun MainAppContent(
                                     showSnackbar(strings.postLinkCopied)
                                 },
                                 onDeletePost = { viewModel.deletePost(it) },
+                                onOpenPostInWaves = { postId -> viewModel.openReelInWaves(postId) },
                                 onUpdateCoverColor = { viewModel.updateCoverColor(it) },
                                 onUpdateCoverUri = { viewModel.updateCoverUri(it) },
                                 onUpdateAvatarColor = { viewModel.updateAvatarColor(it) },

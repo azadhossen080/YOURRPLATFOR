@@ -4,12 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Home
@@ -18,16 +23,20 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.theme.BrandPrimary
 import com.example.util.LocalAppStrings
 
@@ -39,10 +48,11 @@ fun BottomNavBar(
 ) {
     val strings = LocalAppStrings.current
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding()
     ) {
         HorizontalDivider(
             thickness = 1.dp,
@@ -52,84 +62,126 @@ fun BottomNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .navigationBarsPadding(),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .height(78.dp)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
+            BottomNavTabItem(
+                icon = Icons.Rounded.Home,
+                label = strings.navHome,
+                selected = selectedTab == 0,
                 onClick = { onTabSelected(0) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("nav_home")
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Home,
-                    contentDescription = strings.navHome,
-                    tint = if (selectedTab == 0) BrandPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+                testTag = "nav_home",
+                modifier = Modifier.weight(1f)
+            )
 
-            IconButton(
+            BottomNavTabItem(
+                icon = Icons.Rounded.VideoLibrary,
+                label = strings.navWaves,
+                selected = selectedTab == 1,
                 onClick = { onTabSelected(1) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("nav_waves")
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.VideoLibrary,
-                    contentDescription = strings.navWaves,
-                    tint = if (selectedTab == 1) BrandPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                    modifier = Modifier.size(26.dp)
-                )
-            }
+                testTag = "nav_waves",
+                modifier = Modifier.weight(1f)
+            )
 
-            Box(
+            // Raised Large Center Create / Reels / Live Button
+            Column(
                 modifier = Modifier
-                    .size(48.dp)
-                    .shadow(elevation = 6.dp, shape = CircleShape, spotColor = BrandPrimary)
-                    .clip(CircleShape)
-                    .background(BrandPrimary)
+                    .weight(1f)
+                    .heightIn(min = 64.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .clickable { onTabSelected(2) }
+                    .padding(vertical = 2.dp)
                     .testTag("nav_create_post"),
-                contentAlignment = Alignment.Center
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = strings.navCreatePost,
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .shadow(elevation = 6.dp, shape = CircleShape, spotColor = BrandPrimary)
+                        .clip(CircleShape)
+                        .background(BrandPrimary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = strings.navCreatePost,
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = strings.mediaStudio.navCreateLabel,
+                    fontSize = 10.sp,
+                    fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.SemiBold,
+                    color = if (selectedTab == 2) BrandPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            IconButton(
+            BottomNavTabItem(
+                icon = Icons.Rounded.Search,
+                label = strings.navSearch,
+                selected = selectedTab == 3,
                 onClick = { onTabSelected(3) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("nav_search")
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = strings.navSearch,
-                    tint = if (selectedTab == 3) BrandPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+                testTag = "nav_search",
+                modifier = Modifier.weight(1f)
+            )
 
-            IconButton(
+            BottomNavTabItem(
+                icon = Icons.Rounded.Person,
+                label = strings.navProfile,
+                selected = selectedTab == 4,
                 onClick = { onTabSelected(4) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("nav_profile")
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Person,
-                    contentDescription = strings.navProfile,
-                    tint = if (selectedTab == 4) BrandPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+                testTag = "nav_profile",
+                modifier = Modifier.weight(1f)
+            )
         }
+    }
+}
+
+@Composable
+private fun BottomNavTabItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    val activeTint = BrandPrimary
+    val inactiveTint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f)
+    val tint = if (selected) activeTint else inactiveTint
+
+    Column(
+        modifier = modifier
+            .heightIn(min = 64.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) BrandPrimary.copy(alpha = 0.12f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 6.dp)
+            .testTag(testTag),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

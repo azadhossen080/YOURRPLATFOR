@@ -239,7 +239,45 @@ data class AppStrings(
     val identity: IdentityStrings,
     val reviewsStorage: ReviewsStorageStrings,
     val auth: AuthStrings,
-    val community: CommunityStrings
+    val community: CommunityStrings,
+    val mediaStudio: MediaStudioStrings
+)
+
+data class MediaStudioStrings(
+    val navCreateLabel: String,
+    val goLiveBtn: String,
+    val liveBadge: String,
+    val recordingModeBtn: String,
+    val editedModeBtn: String,
+    val colorModeFilterLabel: String,
+    val transitionLabel: String,
+    val liveMojiStickerLabel: String,
+    val startRecordingBtn: String,
+    val stopRecordingBtn: String,
+    val captureVideoCameraBtn: String,
+    val recordingDurationLabel: String,
+    val flipCameraDesc: String,
+    val liveTitlePlaceholder: String,
+    val endLivePostBtn: String,
+    val startBroadcastBtn: String,
+    val liveViewersCount: (Int) -> String,
+    val speedLabel: String,
+    val muteAudioLabel: String,
+    val unmuteAudioLabel: String,
+    val trimRangeLabel: String,
+    val previewEffectsBtn: String,
+    val watchInWavesBtn: String,
+    val tapMojiToSend: String,
+    val swipeUpNextReel: String,
+    val openCreateReelBtn: String,
+    val recordedVideoReadySnackbar: String,
+    val livePostedSnackbar: String,
+    val audioPermissionRequired: String,
+    val defaultLivePostText: String,
+    val defaultReelPostText: String,
+    val postBarPhotoBtn: String,
+    val postBarVideoReelsBtn: String,
+    val postBarLiveBtn: String
 )
 
 data class CommunityStrings(

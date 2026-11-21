@@ -10,6 +10,7 @@ import com.example.data.LocalRepository
 import com.example.model.AppSettings
 import com.example.model.FriendStatus
 import com.example.model.FriendUser
+import com.example.model.MediaEditDraft
 import com.example.model.NotificationModel
 import com.example.model.PostModel
 import com.example.model.ReviewModel
@@ -63,7 +64,8 @@ private data class PendingUploadRequest(
     val text: String,
     val type: String,
     val mediaUri: String?,
-    val previewUri: String?
+    val previewUri: String?,
+    val editDraft: MediaEditDraft = MediaEditDraft()
 )
 
 class PlatformViewModel(application: Application) : AndroidViewModel(application) {
@@ -85,6 +87,9 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
 
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    private val _activeReelPostId = MutableStateFlow<String?>(null)
+    val activeReelPostId: StateFlow<String?> = _activeReelPostId.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -219,8 +224,26 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                             repo.seedDefaultPostIfEmpty(seedPost)
                         }
                     } else if (remotePosts.isNotEmpty()) {
-                        _posts.value = remotePosts
-                        repository.savePosts(remotePosts)
+                        val existingById = _posts.value.associateBy { it.id }
+                        val merged = remotePosts.map { remote ->
+                            val local = existingById[remote.id]
+                            if (local != null) {
+                                remote.copy(
+                                    colorFilter = local.colorFilter,
+                                    transitionEffect = local.transitionEffect,
+                                    mojiStickers = local.mojiStickers,
+                                    playbackSpeed = local.playbackSpeed,
+                                    isMuted = local.isMuted,
+                                    trimStartFraction = local.trimStartFraction,
+                                    trimEndFraction = local.trimEndFraction,
+                                    isLiveStream = local.isLiveStream
+                                )
+                            } else {
+                                remote
+                            }
+                        }
+                        _posts.value = merged
+                        repository.savePosts(merged)
                     }
                 }
         }
@@ -306,6 +329,11 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         _selectedTab.value = tab
     }
 
+    fun openReelInWaves(postId: String? = null) {
+        _activeReelPostId.value = postId
+        _selectedTab.value = 1
+    }
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -315,12 +343,13 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         type: String,
         mediaUri: String?,
         previewUri: String? = mediaUri,
+        editDraft: MediaEditDraft = MediaEditDraft(),
         onPublished: () -> Unit = {}
     ) {
         if (_uploadState.value is PostUploadState.Uploading) return
 
         val finalCaption = if (text.isBlank()) currentStrings().defaultMediaPostText else text.trim()
-        lastUploadRequest = PendingUploadRequest(finalCaption, type, mediaUri, previewUri)
+        lastUploadRequest = PendingUploadRequest(finalCaption, type, mediaUri, previewUri, editDraft)
         _uploadState.value = PostUploadState.Uploading(
             postText = finalCaption,
             mediaType = type,
@@ -335,7 +364,7 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
 
                 var finalMediaUri = mediaUri
                 var finalThumbnailUri = previewUri
-                var isVideo = type == "reels"
+                var isVideo = type == "reels" || type == "live" || editDraft.isLiveStream
 
                 if (!mediaUri.isNullOrBlank()) {
                     _uploadState.value = PostUploadState.Uploading(
@@ -362,7 +391,7 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                     }
                     finalMediaUri = processed.mediaUri
                     finalThumbnailUri = processed.thumbnailUri ?: previewUri
-                    isVideo = processed.isVideo
+                    isVideo = processed.isVideo || type == "reels" || type == "live" || editDraft.isLiveStream
                 } else {
                     _uploadState.value = PostUploadState.Uploading(
                         postText = finalCaption,
@@ -394,19 +423,28 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                 )
                 delay(160)
 
+                val isReelDestination = isVideo || type == "reels" || type == "live" || editDraft.isLiveStream
                 val newPost = PostModel(
                     id = UUID.randomUUID().toString(),
                     userName = _userProfile.value.name,
                     timeAgo = currentStrings().justNow,
                     postText = finalCaption,
                     mediaUri = finalMediaUri,
-                    mediaType = type,
+                    mediaType = if (isVideo && type == "gallery") "reels" else type,
                     thumbnailUri = finalThumbnailUri,
                     isVideo = isVideo,
                     likeCount = 0,
                     isLiked = false,
                     comments = emptyList(),
-                    isUserPost = true
+                    isUserPost = true,
+                    colorFilter = editDraft.colorFilter,
+                    transitionEffect = editDraft.transitionEffect,
+                    mojiStickers = editDraft.mojiStickers,
+                    playbackSpeed = editDraft.playbackSpeed,
+                    isMuted = editDraft.isMuted,
+                    trimStartFraction = editDraft.trimStartFraction,
+                    trimEndFraction = editDraft.trimEndFraction,
+                    isLiveStream = editDraft.isLiveStream || type == "live"
                 )
                 val updated = listOf(newPost) + _posts.value
                 _posts.value = updated
@@ -417,7 +455,12 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                 }
 
                 _uploadState.value = PostUploadState.Success(newPost.id)
-                _selectedTab.value = 0
+                if (isReelDestination) {
+                    _activeReelPostId.value = newPost.id
+                    _selectedTab.value = 1
+                } else {
+                    _selectedTab.value = 0
+                }
                 onPublished()
             } catch (e: CancellationException) {
                 throw e
@@ -436,6 +479,7 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             type = req.type,
             mediaUri = req.mediaUri,
             previewUri = req.previewUri,
+            editDraft = req.editDraft,
             onPublished = onPublished
         )
     }
@@ -446,7 +490,13 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun addNewPost(text: String, type: String, mediaUri: String?) {
+    fun addNewPost(
+        text: String,
+        type: String,
+        mediaUri: String?,
+        editDraft: MediaEditDraft = MediaEditDraft()
+    ) {
+        val isReelDestination = type == "reels" || type == "live" || editDraft.isLiveStream
         val newPost = PostModel(
             id = UUID.randomUUID().toString(),
             userName = _userProfile.value.name,
@@ -454,16 +504,29 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             postText = text,
             mediaUri = mediaUri,
             mediaType = type,
-            isVideo = type == "reels",
+            isVideo = isReelDestination,
             likeCount = 0,
             isLiked = false,
             comments = emptyList(),
-            isUserPost = true
+            isUserPost = true,
+            colorFilter = editDraft.colorFilter,
+            transitionEffect = editDraft.transitionEffect,
+            mojiStickers = editDraft.mojiStickers,
+            playbackSpeed = editDraft.playbackSpeed,
+            isMuted = editDraft.isMuted,
+            trimStartFraction = editDraft.trimStartFraction,
+            trimEndFraction = editDraft.trimEndFraction,
+            isLiveStream = editDraft.isLiveStream || type == "live"
         )
         val updated = listOf(newPost) + _posts.value
         _posts.value = updated
         repository.savePosts(updated)
-        _selectedTab.value = 0
+        if (isReelDestination) {
+            _activeReelPostId.value = newPost.id
+            _selectedTab.value = 1
+        } else {
+            _selectedTab.value = 0
+        }
         if (signedInUid() != null) {
             viewModelScope.launch { firestoreRepo?.savePost(newPost) }
         }

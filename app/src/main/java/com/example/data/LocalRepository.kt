@@ -55,6 +55,11 @@ class LocalRepository(private val context: Context) {
                 if (loadedUserName == "আজাদ হোসেন" && obj.optString("id") == "2") {
                     continue
                 }
+                val stickersArray = obj.optJSONArray("mojiStickers") ?: JSONArray()
+                val stickersList = mutableListOf<String>()
+                for (s in 0 until stickersArray.length()) {
+                    stickersList.add(stickersArray.getString(s))
+                }
                 list.add(
                     PostModel(
                         id = obj.getString("id"),
@@ -68,7 +73,15 @@ class LocalRepository(private val context: Context) {
                         likeCount = obj.optInt("likeCount", 0),
                         isLiked = obj.optBoolean("isLiked", false),
                         comments = commentsList,
-                        isUserPost = obj.optBoolean("isUserPost", false)
+                        isUserPost = obj.optBoolean("isUserPost", false),
+                        colorFilter = obj.optString("colorFilter", com.example.model.ColorFilterMode.NONE.id),
+                        transitionEffect = obj.optString("transitionEffect", com.example.model.TransitionEffect.NONE.id),
+                        mojiStickers = stickersList,
+                        playbackSpeed = obj.optDouble("playbackSpeed", 1.0).toFloat().coerceIn(0.5f, 2.0f),
+                        isMuted = obj.optBoolean("isMuted", false),
+                        trimStartFraction = obj.optDouble("trimStartFraction", 0.0).toFloat().coerceIn(0f, 0.95f),
+                        trimEndFraction = obj.optDouble("trimEndFraction", 1.0).toFloat().coerceIn(0.05f, 1f),
+                        isLiveStream = obj.optBoolean("isLiveStream", false)
                     )
                 )
             }
@@ -93,6 +106,16 @@ class LocalRepository(private val context: Context) {
             obj.put("likeCount", p.likeCount)
             obj.put("isLiked", p.isLiked)
             obj.put("isUserPost", p.isUserPost)
+            obj.put("colorFilter", p.colorFilter)
+            obj.put("transitionEffect", p.transitionEffect)
+            obj.put("playbackSpeed", p.playbackSpeed.toDouble())
+            obj.put("isMuted", p.isMuted)
+            obj.put("trimStartFraction", p.trimStartFraction.toDouble())
+            obj.put("trimEndFraction", p.trimEndFraction.toDouble())
+            obj.put("isLiveStream", p.isLiveStream)
+            val sArray = JSONArray()
+            p.mojiStickers.forEach { sArray.put(it) }
+            obj.put("mojiStickers", sArray)
             val cArray = JSONArray()
             p.comments.forEach { cArray.put(it) }
             obj.put("comments", cArray)

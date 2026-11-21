@@ -16,22 +16,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.rounded.VideoCall
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,11 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.LocalRepository
 import com.example.model.PostModel
 import com.example.ui.components.PostCardItem
 import com.example.ui.components.UploadProgressCard
-import com.example.ui.theme.BrandAccent
 import com.example.ui.theme.BrandPrimary
 import com.example.util.LocalAppStrings
 import com.example.viewmodel.PostUploadState
@@ -57,16 +49,12 @@ import com.example.viewmodel.PostUploadState
 fun HomeScreen(
     posts: List<PostModel>,
     uploadState: PostUploadState,
-    friendsCount: Int,
-    pendingRequestCount: Int,
     userAvatarUri: String? = null,
     userAvatarColorHex: Long? = null,
     onRetryUpload: () -> Unit,
     onDismissUpload: () -> Unit,
-    onOpenFriends: () -> Unit,
-    onOpenCreatePost: () -> Unit,
-    onJoinCommunity: () -> Unit,
-    onCopyCommunityUrl: () -> Unit,
+    onOpenCreatePost: (initialMode: String?) -> Unit,
+    onOpenPostInWaves: (postId: String) -> Unit,
     onLikePost: (String) -> Unit,
     onCommentPost: (PostModel) -> Unit,
     onSharePost: (PostModel) -> Unit,
@@ -74,6 +62,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
+    val studioStrings = strings.mediaStudio
 
     LazyColumn(
         modifier = modifier
@@ -81,7 +70,7 @@ fun HomeScreen(
             .testTag("home_feed_list"),
         contentPadding = PaddingValues(12.dp)
     ) {
-        // Live post processing & upload status banner
+        // Active upload status banner
         if (uploadState !is PostUploadState.Idle) {
             item {
                 UploadProgressCard(
@@ -93,246 +82,152 @@ fun HomeScreen(
             }
         }
 
-        // Quick create post card (compose icon instead of top-left profile icon)
+        // Clean Post Bar: Compose + Quick Photo, Reels/Video & Live Actions
         item {
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-                    .clickable { onOpenCreatePost() }
-                    .testTag("quick_create_post_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(BrandPrimary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = strings.navCreatePost,
-                            tint = BrandPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = strings.quickCreatePrompt,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            fontSize = 13.sp
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Icon(
-                        imageVector = Icons.Rounded.VideoCall,
-                        contentDescription = strings.navCreatePost,
-                        tint = BrandPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        }
-
-        // Quick Friends & Friend Requests Banner
-        item {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = BrandPrimary.copy(alpha = 0.08f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-                    .clickable { onOpenFriends() }
-                    .testTag("home_friends_banner")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(BrandPrimary),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Group,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = strings.friendsAndRequestsBanner,
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = BrandPrimary,
-                                    fontSize = 13.sp
-                                )
-                            )
-                            Text(
-                                text = if (pendingRequestCount > 0)
-                                    strings.newRequestsCount(pendingRequestCount, friendsCount)
-                                else
-                                    strings.friendsCountFindNew(friendsCount),
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                    fontSize = 11.sp
-                                )
-                            )
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (pendingRequestCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(BrandAccent)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    text = strings.newBadgeCount(pendingRequestCount),
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = strings.friendsRequestsDesc,
-                            tint = BrandPrimary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Official Community ("Join It") Banner
-        item {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
-                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp)
-                    .testTag("home_community_card")
+                    .testTag("quick_create_post_card")
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(BrandPrimary),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .clickable { onOpenCreatePost(null) }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Forum,
-                            contentDescription = strings.community.communitySectionTitle,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BrandPrimary.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = strings.navCreatePost,
+                                tint = BrandPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                    Column(modifier = Modifier.weight(1f)) {
+                        Spacer(modifier = Modifier.width(12.dp))
+
                         Text(
-                            text = strings.community.communityCardTitle,
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 13.sp
+                            text = strings.quickCreatePrompt,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                                fontSize = 14.sp
                             ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = LocalRepository.COMMUNITY_TELEGRAM_URL,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = BrandPrimary,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 11.sp
-                            ),
+                            modifier = Modifier.weight(1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    IconButton(
-                        onClick = onCopyCommunityUrl,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("home_copy_community_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = strings.copyBtn,
-                            tint = BrandPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    )
 
-                    Button(
-                        onClick = onJoinCommunity,
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    Row(
                         modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("join_community_button")
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = strings.community.joinItBtn,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onOpenCreatePost("gallery") }
+                                .padding(horizontal = 6.dp)
+                                .testTag("home_postbar_photo")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoLibrary,
+                                contentDescription = studioStrings.postBarPhotoBtn,
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = studioStrings.postBarPhotoBtn,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onOpenCreatePost("reels") }
+                                .padding(horizontal = 6.dp)
+                                .testTag("home_postbar_reels")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VideoCall,
+                                contentDescription = studioStrings.postBarVideoReelsBtn,
+                                tint = BrandPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = studioStrings.postBarVideoReelsBtn,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onOpenCreatePost("live") }
+                                .padding(horizontal = 6.dp)
+                                .testTag("home_postbar_live")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LiveTv,
+                                contentDescription = studioStrings.postBarLiveBtn,
+                                tint = Color(0xFFE53935),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = studioStrings.postBarLiveBtn,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Post list items
+        // Clean Feed Items (Text, Photos, Videos, Reels, Live)
         items(posts, key = { it.id }) { post ->
             PostCardItem(
                 post = post,
@@ -340,6 +235,9 @@ fun HomeScreen(
                 onCommentClick = { onCommentPost(post) },
                 onShareClick = { onSharePost(post) },
                 onDeleteClick = if (post.isUserPost) { { onDeletePost(post.id) } } else null,
+                onOpenInWaves = if (post.isVideo || post.mediaType == "reels" || post.mediaType == "live" || post.isLiveStream) {
+                    { onOpenPostInWaves(post.id) }
+                } else null,
                 authorAvatarUri = if (post.isUserPost) userAvatarUri else null,
                 authorAvatarColorHex = if (post.isUserPost) userAvatarColorHex else null,
                 modifier = Modifier.padding(bottom = 12.dp)

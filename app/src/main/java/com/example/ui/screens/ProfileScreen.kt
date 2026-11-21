@@ -108,6 +108,7 @@ fun ProfileScreen(
     onCommentPost: (PostModel) -> Unit,
     onSharePost: (PostModel) -> Unit,
     onDeletePost: (String) -> Unit,
+    onOpenPostInWaves: (String) -> Unit = {},
     onUpdateCoverColor: (Long) -> Unit,
     onUpdateCoverUri: (String?) -> Unit,
     onUpdateAvatarColor: (Long) -> Unit,
@@ -685,6 +686,9 @@ fun ProfileScreen(
                             onCommentClick = { onCommentPost(post) },
                             onShareClick = { onSharePost(post) },
                             onDeleteClick = { onDeletePost(post.id) },
+                            onOpenInWaves = if (post.isVideo || post.mediaType == "reels" || post.mediaType == "live" || post.isLiveStream) {
+                                { onOpenPostInWaves(post.id) }
+                            } else null,
                             authorAvatarUri = userProfile.avatarImageUri,
                             authorAvatarColorHex = userProfile.avatarColorHex,
                             modifier = Modifier.padding(bottom = 12.dp)

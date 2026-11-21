@@ -358,4 +358,79 @@ class ExampleRobolectricTest {
         assertNotNull(coverPost.mediaUri)
         assertEquals(viewModel.userProfile.value.coverImageUri, coverPost.mediaUri)
     }
+
+    @Test
+    fun `posting reels or live routes directly to waves and persists creative edits`() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        app.getSharedPreferences("yourplatform_prefs", Context.MODE_PRIVATE).edit().clear().commit()
+
+        val viewModel = PlatformViewModel(app)
+        val editDraft = com.example.model.MediaEditDraft(
+            colorFilter = com.example.model.ColorFilterMode.CINEMA.id,
+            transitionEffect = com.example.model.TransitionEffect.ZOOM_IN.id,
+            mojiStickers = listOf("🔥", "🌊", "✨"),
+            playbackSpeed = 1.5f,
+            isMuted = true,
+            trimStartFraction = 0.1f,
+            trimEndFraction = 0.85f,
+            isLiveStream = true
+        )
+
+        var publishedInvoked = false
+        viewModel.submitPost(
+            text = "My Edited Live Reel #waves",
+            type = "reels",
+            mediaUri = null,
+            previewUri = null,
+            editDraft = editDraft,
+            onPublished = { publishedInvoked = true }
+        )
+
+        val mainLooper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+        var attempts = 0
+        while (viewModel.uploadState.value is PostUploadState.Uploading && attempts < 50) {
+            mainLooper.idleFor(java.time.Duration.ofMillis(250))
+            delay(50)
+            attempts++
+        }
+
+        assertTrue(publishedInvoked)
+        assertEquals(1, viewModel.selectedTab.value)
+
+        val createdReel = viewModel.posts.value.first()
+        assertEquals(createdReel.id, viewModel.activeReelPostId.value)
+        assertTrue(createdReel.isVideo)
+        assertEquals("cinema", createdReel.colorFilter)
+        assertEquals("zoom_in", createdReel.transitionEffect)
+        assertEquals(listOf("🔥", "🌊", "✨"), createdReel.mojiStickers)
+        assertEquals(1.5f, createdReel.playbackSpeed)
+        assertTrue(createdReel.isMuted)
+        assertEquals(0.1f, createdReel.trimStartFraction)
+        assertEquals(0.85f, createdReel.trimEndFraction)
+        assertTrue(createdReel.isLiveStream)
+
+        // Verify persistence across ViewModel reload
+        val reloaded = PlatformViewModel(app)
+        val persisted = reloaded.posts.value.first { it.id == createdReel.id }
+        assertEquals("cinema", persisted.colorFilter)
+        assertEquals("zoom_in", persisted.transitionEffect)
+        assertEquals(listOf("🔥", "🌊", "✨"), persisted.mojiStickers)
+        assertEquals(1.5f, persisted.playbackSpeed)
+        assertTrue(persisted.isMuted)
+        assertTrue(persisted.isLiveStream)
+
+        // Verify openReelInWaves switches tab to 1 and focuses requested reel
+        reloaded.setSelectedTab(0)
+        assertEquals(0, reloaded.selectedTab.value)
+        reloaded.openReelInWaves(persisted.id)
+        assertEquals(1, reloaded.selectedTab.value)
+        assertEquals(persisted.id, reloaded.activeReelPostId.value)
+
+        // Ensure Firestore payload mapper keeps rules-safe mediaType for live posts
+        val firestoreMap = com.example.data.FirestorePayloadMapper.toPostCreateMap(
+            uid = "uid_test",
+            post = persisted.copy(mediaType = "live")
+        )
+        assertEquals("reels", firestoreMap["mediaType"])
+    }
 }
