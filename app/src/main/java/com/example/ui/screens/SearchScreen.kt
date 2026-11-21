@@ -53,6 +53,7 @@ import com.example.model.FriendStatus
 import com.example.model.FriendUser
 import com.example.model.PostModel
 import com.example.ui.components.PostCardItem
+import com.example.ui.components.VerifiedAndVipBadges
 import com.example.ui.theme.BrandPrimary
 import com.example.util.LocalAppStrings
 
@@ -235,12 +236,11 @@ fun SearchScreen(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         if (person.isVerified) {
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Icon(
-                                                imageVector = Icons.Default.Verified,
-                                                contentDescription = null,
-                                                tint = BrandPrimary,
-                                                modifier = Modifier.size(12.dp)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            VerifiedAndVipBadges(
+                                                isVerified = true,
+                                                isVip = person.mutualFriendsCount >= 10,
+                                                compact = true
                                             )
                                         }
                                     }

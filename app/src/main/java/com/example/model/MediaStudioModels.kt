@@ -100,6 +100,40 @@ val DEFAULT_MOJI_STICKERS: List<String> = listOf(
     "🔥", "❤️", "😂", "🌊", "✨", "😎", "🎉", "💯", "👑", "🚀", "💥", "🥳"
 )
 
+val SOUND_TRACK_PRESETS: List<String> = listOf(
+    "Original Audio",
+    "Waves Beat 2026",
+    "Chill Lo-Fi Sunset",
+    "Urban Bass Drop",
+    "Acoustic Breeze",
+    "Cinema Horizon"
+)
+
+val OVERLAY_TEXT_COLORS: List<Long> = listOf(
+    0xFFFFFFFF,
+    0xFFFFD54F,
+    0xFFFF5252,
+    0xFF40C4FF,
+    0xFF69F0AE,
+    0xFFFF4081,
+    0xFFB388FF
+)
+
+val PLAYLIST_PRESETS: List<String> = listOf(
+    "Waves Trending",
+    "Daily Vlogs",
+    "Music & Beats",
+    "Travel & Nature",
+    "Tech & Gaming"
+)
+
+val AGE_RESTRICTION_OPTIONS: List<String> = listOf(
+    "All Ages",
+    "13+",
+    "16+",
+    "18+"
+)
+
 data class LiveFloatingMoji(
     val id: String,
     val emoji: String,
@@ -114,5 +148,17 @@ data class MediaEditDraft(
     val isMuted: Boolean = false,
     val trimStartFraction: Float = 0f,
     val trimEndFraction: Float = 1f,
-    val isLiveStream: Boolean = false
+    val isLiveStream: Boolean = false,
+    val soundName: String = "Original Audio",
+    val overlayText: String = "",
+    val overlayColorHex: Long = 0xFFFFFFFF,
+    val timerDurationSec: Int = 0,
+    val useFrontCamera: Boolean = true,
+    val postTitle: String = "",
+    val locationName: String = "",
+    val playlistName: String = "",
+    val tags: List<String> = emptyList(),
+    val collaborators: List<String> = emptyList(),
+    val ageRestriction: String = "All Ages",
+    val coverPhotoUri: String? = null
 )

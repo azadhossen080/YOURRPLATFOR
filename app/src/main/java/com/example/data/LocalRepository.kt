@@ -60,6 +60,16 @@ class LocalRepository(private val context: Context) {
                 for (s in 0 until stickersArray.length()) {
                     stickersList.add(stickersArray.getString(s))
                 }
+                val tagsArray = obj.optJSONArray("tags") ?: JSONArray()
+                val tagsList = mutableListOf<String>()
+                for (t in 0 until tagsArray.length()) {
+                    tagsList.add(tagsArray.getString(t))
+                }
+                val collabArray = obj.optJSONArray("collaborators") ?: JSONArray()
+                val collabList = mutableListOf<String>()
+                for (col in 0 until collabArray.length()) {
+                    collabList.add(collabArray.getString(col))
+                }
                 list.add(
                     PostModel(
                         id = obj.getString("id"),
@@ -81,7 +91,19 @@ class LocalRepository(private val context: Context) {
                         isMuted = obj.optBoolean("isMuted", false),
                         trimStartFraction = obj.optDouble("trimStartFraction", 0.0).toFloat().coerceIn(0f, 0.95f),
                         trimEndFraction = obj.optDouble("trimEndFraction", 1.0).toFloat().coerceIn(0.05f, 1f),
-                        isLiveStream = obj.optBoolean("isLiveStream", false)
+                        isLiveStream = obj.optBoolean("isLiveStream", false),
+                        postTitle = obj.optString("postTitle", ""),
+                        soundName = obj.optString("soundName", "Original Audio"),
+                        overlayText = obj.optString("overlayText", ""),
+                        overlayColorHex = obj.optLong("overlayColorHex", 0xFFFFFFFF),
+                        timerDurationSec = obj.optInt("timerDurationSec", 0),
+                        locationName = obj.optString("locationName", ""),
+                        playlistName = obj.optString("playlistName", ""),
+                        tags = tagsList,
+                        collaborators = collabList,
+                        ageRestriction = obj.optString("ageRestriction", "All Ages"),
+                        authorVerified = obj.optBoolean("authorVerified", true),
+                        authorVip = obj.optBoolean("authorVip", false)
                     )
                 )
             }
@@ -113,9 +135,25 @@ class LocalRepository(private val context: Context) {
             obj.put("trimStartFraction", p.trimStartFraction.toDouble())
             obj.put("trimEndFraction", p.trimEndFraction.toDouble())
             obj.put("isLiveStream", p.isLiveStream)
+            obj.put("postTitle", p.postTitle)
+            obj.put("soundName", p.soundName)
+            obj.put("overlayText", p.overlayText)
+            obj.put("overlayColorHex", p.overlayColorHex)
+            obj.put("timerDurationSec", p.timerDurationSec)
+            obj.put("locationName", p.locationName)
+            obj.put("playlistName", p.playlistName)
+            obj.put("ageRestriction", p.ageRestriction)
+            obj.put("authorVerified", p.authorVerified)
+            obj.put("authorVip", p.authorVip)
             val sArray = JSONArray()
             p.mojiStickers.forEach { sArray.put(it) }
             obj.put("mojiStickers", sArray)
+            val tArray = JSONArray()
+            p.tags.forEach { tArray.put(it) }
+            obj.put("tags", tArray)
+            val colArray = JSONArray()
+            p.collaborators.forEach { colArray.put(it) }
+            obj.put("collaborators", colArray)
             val cArray = JSONArray()
             p.comments.forEach { cArray.put(it) }
             obj.put("comments", cArray)
@@ -153,7 +191,9 @@ class LocalRepository(private val context: Context) {
                 coverColorHex = obj.optLong("coverColorHex", 0xFF3F51B5),
                 coverImageUri = if (obj.has("coverImageUri") && !obj.isNull("coverImageUri")) obj.getString("coverImageUri") else null,
                 avatarColorHex = obj.optLong("avatarColorHex", 0xFF5352ED),
-                avatarImageUri = if (obj.has("avatarImageUri") && !obj.isNull("avatarImageUri")) obj.getString("avatarImageUri") else null
+                avatarImageUri = if (obj.has("avatarImageUri") && !obj.isNull("avatarImageUri")) obj.getString("avatarImageUri") else null,
+                isVerified = obj.optBoolean("isVerified", true),
+                isVip = obj.optBoolean("isVip", false)
             )
         } catch (e: Exception) {
             UserProfile()
@@ -176,6 +216,8 @@ class LocalRepository(private val context: Context) {
         obj.put("coverImageUri", profile.coverImageUri)
         obj.put("avatarColorHex", profile.avatarColorHex)
         obj.put("avatarImageUri", profile.avatarImageUri)
+        obj.put("isVerified", profile.isVerified)
+        obj.put("isVip", profile.isVip)
         prefs.edit().putString(KEY_PROFILE, obj.toString()).apply()
     }
 
@@ -416,12 +458,14 @@ class LocalRepository(private val context: Context) {
                 id = "1",
                 userName = "YOURPLATFORM Official",
                 timeAgo = "২ মিনিট আগে",
-                postText = "YOURPLATFORM-এ আপনাকে স্বাগতম! আপনার User Name এবং User ID তৈরি করে পোস্ট, রিলস ও রিভিউ শেয়ার শুরু করুন।",
+                postText = "YOURPLATFORM-এ আপনাকে স্বাগতম! আপনার User Name এবং User ID তৈরি করে পোস্ট, রিলস ও লাইভ শেয়ার শুরু করুন।",
                 mediaType = "gradient",
                 likeCount = 18,
                 comments = listOf("দারুণ অভিজ্ঞতা!"),
                 isLiked = false,
-                isUserPost = false
+                isUserPost = false,
+                authorVerified = true,
+                authorVip = true
             )
         )
     }

@@ -14,7 +14,9 @@ data class UserProfile(
     val coverColorHex: Long = 0xFF3F51B5,
     val coverImageUri: String? = null,
     val avatarColorHex: Long = 0xFF5352ED,
-    val avatarImageUri: String? = null
+    val avatarImageUri: String? = null,
+    val isVerified: Boolean = true,
+    val isVip: Boolean = false
 ) {
     val displayInitial: String
         get() = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "U"
@@ -25,4 +27,8 @@ data class UserProfile(
             handle.isNotBlank() -> handle.removePrefix("@")
             else -> "pending_id"
         }
+
+    val isAdmin: Boolean
+        get() = email.equals("djsazad@gmail.com", ignoreCase = true) ||
+            userId.equals("admin", ignoreCase = true)
 }

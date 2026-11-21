@@ -90,6 +90,7 @@ import com.example.data.AiRepository
 import com.example.model.PostModel
 import com.example.model.UserProfile
 import com.example.ui.components.PostCardItem
+import com.example.ui.components.VerifiedAndVipBadges
 import com.example.ui.theme.BrandAccent
 import com.example.ui.theme.BrandPrimary
 import com.example.util.AppStringsRegistry
@@ -448,6 +449,12 @@ fun ProfileScreen(
                         )
                     )
                     Spacer(modifier = Modifier.width(6.dp))
+                    VerifiedAndVipBadges(
+                        isVerified = userProfile.isVerified,
+                        isVip = userProfile.isVip,
+                        compact = true
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -473,13 +480,23 @@ fun ProfileScreen(
                         }
                     }
                 }
-                Text(
-                    text = "${userProfile.handle.ifBlank { "@${userProfile.displayUserId}" }} • ${strings.identity.userIdPrefix} ${userProfile.displayUserId}",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                        fontSize = 12.sp
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        text = "${userProfile.handle.ifBlank { "@${userProfile.displayUserId}" }} • ${strings.identity.userIdPrefix} ${userProfile.displayUserId}",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                            fontSize = 12.sp
+                        )
                     )
-                )
+                    VerifiedAndVipBadges(
+                        isVerified = userProfile.isVerified,
+                        isVip = userProfile.isVip,
+                        compact = true
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)

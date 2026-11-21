@@ -31,6 +31,10 @@ import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Share
@@ -75,6 +79,7 @@ import com.example.ui.theme.BrandAccent
 import com.example.ui.theme.BrandPrimary
 import com.example.util.LocalAppStrings
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PostCardItem(
     post: PostModel,
@@ -141,17 +146,62 @@ fun PostCardItem(
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = post.userName,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        text = post.timeAgo,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            fontSize = 11.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = post.userName,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                         )
-                    )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        VerifiedAndVipBadges(
+                            isVerified = post.authorVerified,
+                            isVip = post.authorVip,
+                            compact = true
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = post.timeAgo,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                fontSize = 11.sp
+                            )
+                        )
+                        if (post.locationName.isNotBlank()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = BrandPrimary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = post.locationName,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = BrandPrimary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                            }
+                        }
+                        if (post.ageRestriction.isNotBlank() && post.ageRestriction != "All Ages") {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = BrandAccent.copy(alpha = 0.14f)
+                            ) {
+                                Text(
+                                    text = post.ageRestriction,
+                                    color = BrandAccent,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 if (isReelOrVideo && onOpenInWaves != null) {
@@ -219,6 +269,17 @@ fun PostCardItem(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            if (post.postTitle.isNotBlank()) {
+                Text(
+                    text = post.postTitle,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    ),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
             // Post Text
             Text(
                 text = post.postText,
@@ -226,6 +287,56 @@ fun PostCardItem(
                     lineHeight = 20.sp
                 )
             )
+
+            if (post.playlistName.isNotBlank() || post.collaborators.isNotEmpty() || post.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (post.playlistName.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = BrandPrimary.copy(alpha = 0.1f)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlaylistPlay,
+                                    contentDescription = null,
+                                    tint = BrandPrimary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = post.playlistName,
+                                    color = BrandPrimary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                    post.collaborators.forEach { collab ->
+                        Text(
+                            text = collab,
+                            color = BrandAccent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    post.tags.forEach { tag ->
+                        Text(
+                            text = "#$tag",
+                            color = BrandPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
 
             // Post Media
             if (post.mediaType == "gradient") {
@@ -273,7 +384,11 @@ fun PostCardItem(
                         mojiStickers = post.mojiStickers,
                         isLiveStream = post.isLiveStream,
                         playbackSpeed = post.playbackSpeed,
-                        isMuted = post.isMuted
+                        isMuted = post.isMuted,
+                        overlayText = post.overlayText,
+                        overlayColorHex = post.overlayColorHex,
+                        soundName = post.soundName,
+                        timerDurationSec = post.timerDurationSec
                     )
                 }
             } else if (!post.mediaUri.isNullOrBlank()) {
@@ -355,7 +470,11 @@ fun PostCardItem(
                         mojiStickers = post.mojiStickers,
                         isLiveStream = post.isLiveStream,
                         playbackSpeed = post.playbackSpeed,
-                        isMuted = post.isMuted
+                        isMuted = post.isMuted,
+                        overlayText = post.overlayText,
+                        overlayColorHex = post.overlayColorHex,
+                        soundName = post.soundName,
+                        timerDurationSec = post.timerDurationSec
                     )
                 }
             } else if (isReelOrVideo) {
@@ -395,7 +514,11 @@ fun PostCardItem(
                         mojiStickers = post.mojiStickers,
                         isLiveStream = post.isLiveStream,
                         playbackSpeed = post.playbackSpeed,
-                        isMuted = post.isMuted
+                        isMuted = post.isMuted,
+                        overlayText = post.overlayText,
+                        overlayColorHex = post.overlayColorHex,
+                        soundName = post.soundName,
+                        timerDurationSec = post.timerDurationSec
                     )
                 }
             }
@@ -544,7 +667,11 @@ fun PostCardItem(
                         mojiStickers = post.mojiStickers,
                         isLiveStream = post.isLiveStream,
                         playbackSpeed = post.playbackSpeed,
-                        isMuted = post.isMuted
+                        isMuted = post.isMuted,
+                        overlayText = post.overlayText,
+                        overlayColorHex = post.overlayColorHex,
+                        soundName = post.soundName,
+                        timerDurationSec = post.timerDurationSec
                     )
 
                     IconButton(

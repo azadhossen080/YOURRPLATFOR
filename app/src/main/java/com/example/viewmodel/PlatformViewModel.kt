@@ -36,6 +36,7 @@ enum class UploadStage {
     PREPARING,
     PROCESSING_MEDIA,
     UPLOADING,
+    REVIEW_1_MIN,
     FINALIZING
 }
 
@@ -46,7 +47,8 @@ sealed interface PostUploadState {
         val mediaType: String,
         val previewUri: String?,
         val progress: Float,
-        val stage: UploadStage
+        val stage: UploadStage,
+        val reviewRemainingSec: Int = 0
     ) : PostUploadState
 
     data class Success(val postId: String) : PostUploadState
@@ -236,7 +238,19 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                                     isMuted = local.isMuted,
                                     trimStartFraction = local.trimStartFraction,
                                     trimEndFraction = local.trimEndFraction,
-                                    isLiveStream = local.isLiveStream
+                                    isLiveStream = local.isLiveStream,
+                                    postTitle = local.postTitle,
+                                    soundName = local.soundName,
+                                    overlayText = local.overlayText,
+                                    overlayColorHex = local.overlayColorHex,
+                                    timerDurationSec = local.timerDurationSec,
+                                    locationName = local.locationName,
+                                    playlistName = local.playlistName,
+                                    tags = local.tags,
+                                    collaborators = local.collaborators,
+                                    ageRestriction = local.ageRestriction,
+                                    authorVerified = local.authorVerified,
+                                    authorVip = local.authorVip
                                 )
                             } else {
                                 remote
@@ -403,35 +417,62 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                     delay(200)
                 }
 
-                for (step in listOf(0.72f, 0.85f, 0.94f)) {
+                for (step in listOf(0.72f, 0.82f, 0.90f)) {
                     _uploadState.value = PostUploadState.Uploading(
                         postText = finalCaption,
                         mediaType = type,
-                        previewUri = finalThumbnailUri ?: finalMediaUri,
+                        previewUri = editDraft.coverPhotoUri ?: finalThumbnailUri ?: finalMediaUri,
                         progress = step,
                         stage = UploadStage.UPLOADING
                     )
-                    delay(220)
+                    delay(180)
+                }
+
+                // Persist optional cover photo if provided in Post Details
+                val resolvedThumbnailUri = if (!editDraft.coverPhotoUri.isNullOrBlank()) {
+                    MediaProcessor.persistImageToFilesDir(
+                        getApplication(),
+                        editDraft.coverPhotoUri,
+                        "post_cover"
+                    ) ?: editDraft.coverPhotoUri
+                } else {
+                    finalThumbnailUri
+                }
+
+                // 1-Min Post Review Processing Stage
+                val reviewSteps = listOf(60, 45, 30, 15, 0)
+                reviewSteps.forEachIndexed { idx, secLeft ->
+                    val reviewProgress = 0.91f + (idx / reviewSteps.size.toFloat()) * 0.07f
+                    _uploadState.value = PostUploadState.Uploading(
+                        postText = finalCaption,
+                        mediaType = type,
+                        previewUri = resolvedThumbnailUri ?: finalMediaUri,
+                        progress = reviewProgress,
+                        stage = UploadStage.REVIEW_1_MIN,
+                        reviewRemainingSec = secLeft
+                    )
+                    delay(180)
                 }
 
                 _uploadState.value = PostUploadState.Uploading(
                     postText = finalCaption,
                     mediaType = type,
-                    previewUri = finalThumbnailUri ?: finalMediaUri,
+                    previewUri = resolvedThumbnailUri ?: finalMediaUri,
                     progress = 0.99f,
                     stage = UploadStage.FINALIZING
                 )
-                delay(160)
+                delay(150)
 
+                val profile = _userProfile.value
                 val isReelDestination = isVideo || type == "reels" || type == "live" || editDraft.isLiveStream
                 val newPost = PostModel(
                     id = UUID.randomUUID().toString(),
-                    userName = _userProfile.value.name,
+                    userName = profile.name,
                     timeAgo = currentStrings().justNow,
                     postText = finalCaption,
                     mediaUri = finalMediaUri,
                     mediaType = if (isVideo && type == "gallery") "reels" else type,
-                    thumbnailUri = finalThumbnailUri,
+                    thumbnailUri = resolvedThumbnailUri,
                     isVideo = isVideo,
                     likeCount = 0,
                     isLiked = false,
@@ -444,7 +485,19 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
                     isMuted = editDraft.isMuted,
                     trimStartFraction = editDraft.trimStartFraction,
                     trimEndFraction = editDraft.trimEndFraction,
-                    isLiveStream = editDraft.isLiveStream || type == "live"
+                    isLiveStream = editDraft.isLiveStream || type == "live",
+                    postTitle = editDraft.postTitle.trim(),
+                    soundName = editDraft.soundName.ifBlank { "Original Audio" },
+                    overlayText = editDraft.overlayText.trim(),
+                    overlayColorHex = editDraft.overlayColorHex,
+                    timerDurationSec = editDraft.timerDurationSec,
+                    locationName = editDraft.locationName.trim(),
+                    playlistName = editDraft.playlistName.trim(),
+                    tags = editDraft.tags,
+                    collaborators = editDraft.collaborators,
+                    ageRestriction = editDraft.ageRestriction.ifBlank { "All Ages" },
+                    authorVerified = profile.isVerified,
+                    authorVip = profile.isVip
                 )
                 val updated = listOf(newPost) + _posts.value
                 _posts.value = updated
@@ -496,14 +549,16 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         mediaUri: String?,
         editDraft: MediaEditDraft = MediaEditDraft()
     ) {
+        val profile = _userProfile.value
         val isReelDestination = type == "reels" || type == "live" || editDraft.isLiveStream
         val newPost = PostModel(
             id = UUID.randomUUID().toString(),
-            userName = _userProfile.value.name,
+            userName = profile.name,
             timeAgo = currentStrings().justNow,
             postText = text,
             mediaUri = mediaUri,
             mediaType = type,
+            thumbnailUri = editDraft.coverPhotoUri,
             isVideo = isReelDestination,
             likeCount = 0,
             isLiked = false,
@@ -516,7 +571,19 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             isMuted = editDraft.isMuted,
             trimStartFraction = editDraft.trimStartFraction,
             trimEndFraction = editDraft.trimEndFraction,
-            isLiveStream = editDraft.isLiveStream || type == "live"
+            isLiveStream = editDraft.isLiveStream || type == "live",
+            postTitle = editDraft.postTitle.trim(),
+            soundName = editDraft.soundName.ifBlank { "Original Audio" },
+            overlayText = editDraft.overlayText.trim(),
+            overlayColorHex = editDraft.overlayColorHex,
+            timerDurationSec = editDraft.timerDurationSec,
+            locationName = editDraft.locationName.trim(),
+            playlistName = editDraft.playlistName.trim(),
+            tags = editDraft.tags,
+            collaborators = editDraft.collaborators,
+            ageRestriction = editDraft.ageRestriction.ifBlank { "All Ages" },
+            authorVerified = profile.isVerified,
+            authorVip = profile.isVip
         )
         val updated = listOf(newPost) + _posts.value
         _posts.value = updated
@@ -662,7 +729,9 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
             likeCount = 0,
             isLiked = false,
             comments = emptyList(),
-            isUserPost = true
+            isUserPost = true,
+            authorVerified = profile.isVerified,
+            authorVip = profile.isVip
         )
         val updatedPosts = listOf(feedPost) + _posts.value
         _posts.value = updatedPosts
@@ -832,15 +901,28 @@ class PlatformViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun submitReview(rating: Int, comment: String) {
-        if (comment.isBlank()) return
+    fun updateVerificationAndVip(isVerified: Boolean, isVip: Boolean) {
+        val updated = _userProfile.value.copy(isVerified = isVerified, isVip = isVip)
+        _userProfile.value = updated
+        repository.saveProfile(updated)
+        val updatedPosts = _posts.value.map { post ->
+            if (post.isUserPost) post.copy(authorVerified = isVerified, authorVip = isVip) else post
+        }
+        _posts.value = updatedPosts
+        repository.savePosts(updatedPosts)
+        syncProfileToFirestore(updated)
+    }
+
+    fun submitReview(rating: Int, comment: String = "") {
+        val safeRating = rating.coerceIn(1, 5)
+        val finalComment = comment.trim().ifBlank { "$safeRating ★" }
         val profile = _userProfile.value
         val newReview = ReviewModel(
             id = UUID.randomUUID().toString(),
             userId = profile.displayUserId,
             userName = profile.name,
-            rating = rating.coerceIn(1, 5),
-            comment = comment.trim(),
+            rating = safeRating,
+            comment = finalComment,
             timestamp = System.currentTimeMillis(),
             timeAgo = currentStrings().justNow,
             status = ReviewStatus.APPROVED,

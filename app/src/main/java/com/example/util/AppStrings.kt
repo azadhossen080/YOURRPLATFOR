@@ -277,7 +277,44 @@ data class MediaStudioStrings(
     val defaultReelPostText: String,
     val postBarPhotoBtn: String,
     val postBarVideoReelsBtn: String,
-    val postBarLiveBtn: String
+    val postBarLiveBtn: String,
+    val createOptionPost: String,
+    val createOptionCamera: String,
+    val createOptionLive: String,
+    val addSoundBtn: String,
+    val soundPickerTitle: String,
+    val nextStepBtn: String,
+    val filterToolLabel: String,
+    val trimToolLabel: String,
+    val flipToolLabel: String,
+    val slowMoToolLabel: String,
+    val timerToolLabel: String,
+    val textToolLabel: String,
+    val colorToolLabel: String,
+    val mojiToolLabel: String,
+    val overlayTextPlaceholder: String,
+    val postDetailsHeader: String,
+    val postTitleLabel: String,
+    val postTitlePlaceholder: String,
+    val postDescLabel: String,
+    val postDescPlaceholder: String,
+    val locationLabel: String,
+    val locationPlaceholder: String,
+    val playlistLabel: String,
+    val playlistPlaceholder: String,
+    val tagsLabel: String,
+    val tagsPlaceholder: String,
+    val collaborationLabel: String,
+    val collaborationPlaceholder: String,
+    val ageRestrictionLabel: String,
+    val coverPhotoLabel: String,
+    val chooseCoverPhotoBtn: String,
+    val stepReview1MinLabel: String,
+    val review1MinProgressDetail: (Int) -> String,
+    val verifiedBadgeDesc: String,
+    val vipBadgeLabel: String,
+    val verifiedIdToggleLabel: String,
+    val vipMemberToggleLabel: String
 )
 
 data class CommunityStrings(
@@ -402,7 +439,14 @@ data class ReviewsStorageStrings(
     val hideBtn: String,
     val pinBtn: String,
     val unpinBtn: String,
-    val noReviewsYet: String
+    val noReviewsYet: String,
+    val userRatingSummaryTitle: String,
+    val userRatingOnlySubtitle: String,
+    val adminOnlyNotice: String,
+    val adminUnlockBtn: String,
+    val adminPinLabel: String,
+    val adminWrongPinError: String,
+    val adminModeActiveBadge: String
 )
 
 val LocalAppStrings = staticCompositionLocalOf { BengaliStrings }

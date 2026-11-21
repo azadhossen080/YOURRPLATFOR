@@ -30,6 +30,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,7 +61,8 @@ fun CreateIdentityDialog(
     currentProfile: UserProfile,
     isEditingExisting: Boolean,
     onDismiss: () -> Unit,
-    onSaveIdentity: (userName: String, userId: String, email: String, phoneNumber: String) -> Unit
+    onSaveIdentity: (userName: String, userId: String, email: String, phoneNumber: String) -> Unit,
+    onUpdateVerificationAndVip: (isVerified: Boolean, isVip: Boolean) -> Unit = { _, _ -> }
 ) {
     val strings = LocalAppStrings.current
     var userName by remember(currentProfile.name, isEditingExisting) {
@@ -76,6 +79,8 @@ fun CreateIdentityDialog(
     var phoneNumber by remember(currentProfile.phoneNumber, isEditingExisting) {
         mutableStateOf(currentProfile.phoneNumber)
     }
+    var isVerifiedBadge by remember(currentProfile.isVerified) { mutableStateOf(currentProfile.isVerified) }
+    var isVipBadge by remember(currentProfile.isVip) { mutableStateOf(currentProfile.isVip) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
     fun generateSuggestedId(): String {
@@ -245,6 +250,63 @@ fun CreateIdentityDialog(
                         .testTag("identity_phone_input")
                 )
 
+                // Verified User ID Logo (Blue Mark) & VIP Badge Toggles
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                VerifiedAndVipBadges(isVerified = true, isVip = false, compact = true)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = strings.mediaStudio.verifiedIdToggleLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Switch(
+                                checked = isVerifiedBadge,
+                                onCheckedChange = { isVerifiedBadge = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = VerifiedBlueColor, checkedTrackColor = VerifiedBlueColor.copy(alpha = 0.4f)),
+                                modifier = Modifier.testTag("toggle_verified_blue_mark")
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                VerifiedAndVipBadges(isVerified = false, isVip = true, compact = true)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = strings.mediaStudio.vipMemberToggleLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Switch(
+                                checked = isVipBadge,
+                                onCheckedChange = { isVipBadge = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = VipGoldStart, checkedTrackColor = VipGoldStart.copy(alpha = 0.4f)),
+                                modifier = Modifier.testTag("toggle_vip_badge")
+                            )
+                        }
+                    }
+                }
+
                 if (validationError != null) {
                     Text(
                         text = validationError!!,
@@ -263,6 +325,7 @@ fun CreateIdentityDialog(
                     if (cleanName.isBlank() || cleanId.isBlank()) {
                         validationError = strings.identity.identityRequiredError
                     } else {
+                        onUpdateVerificationAndVip(isVerifiedBadge, isVipBadge)
                         onSaveIdentity(cleanName, cleanId, email.trim(), phoneNumber.trim())
                     }
                 },

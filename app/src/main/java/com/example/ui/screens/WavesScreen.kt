@@ -80,6 +80,7 @@ import com.example.model.UserProfile
 import com.example.ui.components.AppliedMediaDecorationsOverlay
 import com.example.ui.components.FloatingMojiStage
 import com.example.ui.components.TransitionEffectPreviewContainer
+import com.example.ui.components.VerifiedAndVipBadges
 import com.example.ui.theme.BrandAccent
 import com.example.ui.theme.BrandPrimary
 import com.example.util.LocalAppStrings
@@ -105,6 +106,16 @@ private data class WavesReelEntry(
     val isMuted: Boolean,
     val trimStartFraction: Float,
     val isLiveStream: Boolean,
+    val overlayText: String = "",
+    val overlayColorHex: Long = 0xFFFFFFFF,
+    val timerDurationSec: Int = 0,
+    val locationName: String = "",
+    val playlistName: String = "",
+    val tags: List<String> = emptyList(),
+    val collaborators: List<String> = emptyList(),
+    val ageRestriction: String = "All Ages",
+    val authorVerified: Boolean = true,
+    val authorVip: Boolean = false,
     val gradient: List<Color>,
     val sourcePost: PostModel? = null
 )
@@ -144,10 +155,15 @@ fun WavesScreen(
             }
             WavesReelEntry(
                 id = post.id,
-                title = if (post.isLiveStream) studioStrings.liveBadge else "${strings.navWaves} #${idx + 1}",
+                title = when {
+                    post.postTitle.isNotBlank() -> post.postTitle
+                    post.isLiveStream -> studioStrings.liveBadge
+                    else -> "${strings.navWaves} #${idx + 1}"
+                },
                 author = handle,
                 caption = post.postText,
-                song = "Original Audio - ${post.userName}",
+                song = post.soundName.takeIf { it.isNotBlank() && it != "Original Audio" }
+                    ?: "Original Audio - ${post.userName}",
                 likes = post.likeCount,
                 isLiked = post.isLiked,
                 comments = post.comments.size,
@@ -161,6 +177,16 @@ fun WavesScreen(
                 isMuted = post.isMuted,
                 trimStartFraction = post.trimStartFraction,
                 isLiveStream = post.isLiveStream || post.mediaType == "live",
+                overlayText = post.overlayText,
+                overlayColorHex = post.overlayColorHex,
+                timerDurationSec = post.timerDurationSec,
+                locationName = post.locationName,
+                playlistName = post.playlistName,
+                tags = post.tags,
+                collaborators = post.collaborators,
+                ageRestriction = post.ageRestriction,
+                authorVerified = post.authorVerified,
+                authorVip = post.authorVip,
                 gradient = showcaseGradients[idx % showcaseGradients.size],
                 sourcePost = post
             )
@@ -340,6 +366,10 @@ fun WavesScreen(
                         isLiveStream = reel.isLiveStream,
                         playbackSpeed = reel.playbackSpeed,
                         isMuted = isMuted,
+                        overlayText = reel.overlayText,
+                        overlayColorHex = reel.overlayColorHex,
+                        soundName = reel.song,
+                        timerDurationSec = reel.timerDurationSec,
                         languageCode = selectedLanguageCode
                     )
 
@@ -511,13 +541,34 @@ fun WavesScreen(
                             .padding(start = 14.dp, end = 14.dp, bottom = 14.dp, top = 16.dp)
                     ) {
                         Column(modifier = Modifier.fillMaxWidth(0.78f)) {
-                            Text(
-                                text = reel.author,
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = reel.author,
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                VerifiedAndVipBadges(
+                                    isVerified = reel.authorVerified,
+                                    isVip = reel.authorVip,
+                                    compact = true
+                                )
+                            }
+                            if (reel.locationName.isNotBlank() || reel.playlistName.isNotBlank()) {
+                                val metaLine = listOfNotNull(
+                                    reel.locationName.takeIf { it.isNotBlank() }?.let { "📍 $it" },
+                                    reel.playlistName.takeIf { it.isNotBlank() }
+                                ).joinToString(" • ")
+                                Text(
+                                    text = metaLine,
+                                    color = Color.White.copy(alpha = 0.78f),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = reel.caption,
@@ -529,6 +580,17 @@ fun WavesScreen(
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (reel.tags.isNotEmpty() || reel.collaborators.isNotEmpty()) {
+                                val tagLine = (reel.collaborators + reel.tags.map { "#$it" }).joinToString(" ")
+                                Text(
+                                    text = tagLine,
+                                    color = Color(0xFF80DEEA),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(

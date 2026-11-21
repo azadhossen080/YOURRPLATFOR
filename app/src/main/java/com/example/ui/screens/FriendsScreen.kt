@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.FriendStatus
 import com.example.model.FriendUser
+import com.example.ui.components.VerifiedAndVipBadges
 import com.example.ui.theme.BrandAccent
 import com.example.ui.theme.BrandPrimary
 import com.example.util.LocalAppStrings
@@ -574,11 +575,10 @@ private fun FriendUserCard(
                         )
                         if (user.isVerified) {
                             Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription = "Verified",
-                                tint = BrandPrimary,
-                                modifier = Modifier.size(15.dp)
+                            VerifiedAndVipBadges(
+                                isVerified = true,
+                                isVip = user.mutualFriendsCount >= 10,
+                                compact = true
                             )
                         }
                     }

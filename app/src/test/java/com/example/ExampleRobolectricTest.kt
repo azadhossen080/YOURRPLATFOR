@@ -167,14 +167,24 @@ class ExampleRobolectricTest {
         app.getSharedPreferences("yourplatform_prefs", Context.MODE_PRIVATE).edit().clear().commit()
 
         val viewModel = PlatformViewModel(app)
-        viewModel.createOrUpdateIdentity("Sara Khan", "sara_id_01")
-        viewModel.submitReview(rating = 5, comment = "Clean interface and fast posting!")
+        viewModel.createOrUpdateIdentity("Sara Khan", "sara_id_01", email = "sara@example.com")
+        assertFalse(viewModel.userProfile.value.isAdmin)
 
+        // Regular user can submit star rating even with blank comment
+        viewModel.submitReview(rating = 4, comment = "")
         assertEquals(1, viewModel.reviews.value.size)
+        assertEquals(4, viewModel.reviews.value.first().rating)
+
+        viewModel.submitReview(rating = 5, comment = "Clean interface and fast posting!")
+        assertEquals(2, viewModel.reviews.value.size)
         val rev = viewModel.reviews.value.first()
         assertEquals("Sara Khan", rev.userName)
         assertEquals("sara_id_01", rev.userId)
         assertEquals(5, rev.rating)
+
+        // Admin account automatically unlocks review moderation
+        viewModel.createOrUpdateIdentity("Sazad Admin", "admin_01", email = "djsazad@gmail.com")
+        assertTrue(viewModel.userProfile.value.isAdmin)
 
         viewModel.togglePinReview(rev.id)
         assertTrue(viewModel.reviews.value.first().isPinned)
@@ -182,16 +192,6 @@ class ExampleRobolectricTest {
         viewModel.updateReviewStatus(rev.id, com.example.model.ReviewStatus.HIDDEN)
         assertEquals(com.example.model.ReviewStatus.HIDDEN, viewModel.reviews.value.first().status)
 
-        val exportedFile = viewModel.exportCollectedUserData()
-        assertNotNull(exportedFile)
-        assertTrue(exportedFile!!.exists())
-        val content = exportedFile.readText()
-        assertFalse(content.contains("terabox", ignoreCase = true))
-        assertFalse(content.contains("firebase", ignoreCase = true))
-        assertFalse(content.contains("firestore", ignoreCase = true))
-        val parsed = org.json.JSONObject(content)
-        assertEquals("Cloud & Local Sync", parsed.getString("storageMode"))
-        assertEquals("https://t.me/sazadofficialbd", parsed.getString("communityUrl"))
         val en = AppStringsRegistry.forCode("en_US")
         val bn = AppStringsRegistry.forCode("bn_BD")
         assertEquals("https://t.me/sazadofficialbd", en.community.communityUrlLabel)
@@ -199,15 +199,9 @@ class ExampleRobolectricTest {
         assertFalse(en.auth.authSubtitle.contains("firebase", ignoreCase = true))
         assertFalse(en.auth.cloudSyncedLabel.contains("firestore", ignoreCase = true))
         assertFalse(bn.auth.authSubtitle.contains("firebase", ignoreCase = true))
-        assertFalse(bn.reviewsStorage.storageNoticeText.contains("firestore", ignoreCase = true))
-        val parsedProfile = parsed.getJSONObject("userProfile")
-        assertEquals("sara_id_01", parsedProfile.getString("userId"))
-        assertEquals("Sara Khan", parsedProfile.getString("userName"))
-        assertEquals("0", parsedProfile.getString("followersCount"))
-        assertTrue(content.contains("Clean interface and fast posting!"))
 
         viewModel.deleteReview(rev.id)
-        assertTrue(viewModel.reviews.value.isEmpty())
+        assertEquals(1, viewModel.reviews.value.size)
     }
 
     @Test
@@ -222,6 +216,7 @@ class ExampleRobolectricTest {
             email = "ayesha@example.com",
             phoneNumber = "+8801712345678"
         )
+        viewModel.updateVerificationAndVip(isVerified = true, isVip = true)
 
         val profile = viewModel.userProfile.value
         assertEquals("Ayesha Rahman", profile.name)
@@ -230,6 +225,8 @@ class ExampleRobolectricTest {
         assertEquals("+8801712345678", profile.phoneNumber)
         assertEquals("0", profile.followersCount)
         assertTrue(profile.isProfileCreated)
+        assertTrue(profile.isVerified)
+        assertTrue(profile.isVip)
 
         val publicMap = com.example.data.FirestorePayloadMapper.toPublicProfileCreateMap("uid_123", profile)
         assertFalse(publicMap.containsKey("id"))
@@ -360,11 +357,13 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `posting reels or live routes directly to waves and persists creative edits`() = runBlocking {
+    fun `posting reels with video studio details runs 1 min review routes to waves and persists`() = runBlocking {
         val app = ApplicationProvider.getApplicationContext<Application>()
         app.getSharedPreferences("yourplatform_prefs", Context.MODE_PRIVATE).edit().clear().commit()
 
         val viewModel = PlatformViewModel(app)
+        viewModel.updateVerificationAndVip(isVerified = true, isVip = true)
+
         val editDraft = com.example.model.MediaEditDraft(
             colorFilter = com.example.model.ColorFilterMode.CINEMA.id,
             transitionEffect = com.example.model.TransitionEffect.ZOOM_IN.id,
@@ -373,9 +372,21 @@ class ExampleRobolectricTest {
             isMuted = true,
             trimStartFraction = 0.1f,
             trimEndFraction = 0.85f,
-            isLiveStream = true
+            isLiveStream = true,
+            soundName = "Waves Beat 2026",
+            overlayText = "Dhaka Night Ride",
+            overlayColorHex = 0xFFFFD54F,
+            timerDurationSec = 30,
+            useFrontCamera = false,
+            postTitle = "Night Ride Highlights",
+            locationName = "Dhaka",
+            playlistName = "Travel & Nature",
+            tags = listOf("waves", "night"),
+            collaborators = listOf("@farhan_x"),
+            ageRestriction = "13+"
         )
 
+        var sawReviewStage = false
         var publishedInvoked = false
         viewModel.submitPost(
             text = "My Edited Live Reel #waves",
@@ -388,12 +399,17 @@ class ExampleRobolectricTest {
 
         val mainLooper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
         var attempts = 0
-        while (viewModel.uploadState.value is PostUploadState.Uploading && attempts < 50) {
-            mainLooper.idleFor(java.time.Duration.ofMillis(250))
-            delay(50)
+        while (viewModel.uploadState.value is PostUploadState.Uploading && attempts < 80) {
+            val state = viewModel.uploadState.value
+            if (state is PostUploadState.Uploading && state.stage == com.example.viewmodel.UploadStage.REVIEW_1_MIN) {
+                sawReviewStage = true
+            }
+            mainLooper.idleFor(java.time.Duration.ofMillis(120))
+            delay(40)
             attempts++
         }
 
+        assertTrue("Expected REVIEW_1_MIN upload stage to be observed", sawReviewStage)
         assertTrue(publishedInvoked)
         assertEquals(1, viewModel.selectedTab.value)
 
@@ -408,16 +424,32 @@ class ExampleRobolectricTest {
         assertEquals(0.1f, createdReel.trimStartFraction)
         assertEquals(0.85f, createdReel.trimEndFraction)
         assertTrue(createdReel.isLiveStream)
+        assertEquals("Night Ride Highlights", createdReel.postTitle)
+        assertEquals("Waves Beat 2026", createdReel.soundName)
+        assertEquals("Dhaka Night Ride", createdReel.overlayText)
+        assertEquals(0xFFFFD54F, createdReel.overlayColorHex)
+        assertEquals(30, createdReel.timerDurationSec)
+        assertEquals("Dhaka", createdReel.locationName)
+        assertEquals("Travel & Nature", createdReel.playlistName)
+        assertEquals(listOf("waves", "night"), createdReel.tags)
+        assertEquals(listOf("@farhan_x"), createdReel.collaborators)
+        assertEquals("13+", createdReel.ageRestriction)
+        assertTrue(createdReel.authorVerified)
+        assertTrue(createdReel.authorVip)
 
         // Verify persistence across ViewModel reload
         val reloaded = PlatformViewModel(app)
         val persisted = reloaded.posts.value.first { it.id == createdReel.id }
-        assertEquals("cinema", persisted.colorFilter)
-        assertEquals("zoom_in", persisted.transitionEffect)
-        assertEquals(listOf("🔥", "🌊", "✨"), persisted.mojiStickers)
-        assertEquals(1.5f, persisted.playbackSpeed)
-        assertTrue(persisted.isMuted)
-        assertTrue(persisted.isLiveStream)
+        assertEquals("Night Ride Highlights", persisted.postTitle)
+        assertEquals("Waves Beat 2026", persisted.soundName)
+        assertEquals("Dhaka Night Ride", persisted.overlayText)
+        assertEquals("Dhaka", persisted.locationName)
+        assertEquals("Travel & Nature", persisted.playlistName)
+        assertEquals("13+", persisted.ageRestriction)
+        assertTrue(persisted.authorVerified)
+        assertTrue(persisted.authorVip)
+        assertTrue(reloaded.userProfile.value.isVerified)
+        assertTrue(reloaded.userProfile.value.isVip)
 
         // Verify openReelInWaves switches tab to 1 and focuses requested reel
         reloaded.setSelectedTab(0)

@@ -20,6 +20,17 @@ data class PostModel(
     val isMuted: Boolean = false,
     val trimStartFraction: Float = 0f,
     val trimEndFraction: Float = 1f,
-    val isLiveStream: Boolean = false
+    val isLiveStream: Boolean = false,
+    val postTitle: String = "",
+    val soundName: String = "Original Audio",
+    val overlayText: String = "",
+    val overlayColorHex: Long = 0xFFFFFFFF,
+    val timerDurationSec: Int = 0,
+    val locationName: String = "",
+    val playlistName: String = "",
+    val tags: List<String> = emptyList(),
+    val collaborators: List<String> = emptyList(),
+    val ageRestriction: String = "All Ages",
+    val authorVerified: Boolean = true,
+    val authorVip: Boolean = false
 )
-

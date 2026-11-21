@@ -49,6 +49,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Close
@@ -60,7 +61,10 @@ import androidx.compose.material.icons.filled.MovieFilter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -187,6 +191,66 @@ fun TransitionEffectPreviewContainer(
     }
 }
 
+val VerifiedBlueColor = Color(0xFF1D9BF0)
+val VipGoldStart = Color(0xFFFFB300)
+val VipGoldEnd = Color(0xFFFF6F00)
+
+@Composable
+fun VerifiedAndVipBadges(
+    isVerified: Boolean,
+    isVip: Boolean,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    val strings = LocalAppStrings.current
+    if (!isVerified && !isVip) return
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        if (isVerified) {
+            Icon(
+                imageVector = Icons.Filled.Verified,
+                contentDescription = strings.mediaStudio.verifiedBadgeDesc,
+                tint = VerifiedBlueColor,
+                modifier = Modifier
+                    .size(if (compact) 14.dp else 17.dp)
+                    .testTag("verified_blue_badge")
+            )
+        }
+        if (isVip) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(VipGoldStart, VipGoldEnd)
+                        )
+                    )
+                    .padding(horizontal = if (compact) 5.dp else 6.dp, vertical = 2.dp)
+                    .testTag("vip_crown_badge")
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.WorkspacePremium,
+                    contentDescription = strings.mediaStudio.vipBadgeLabel,
+                    tint = Color.White,
+                    modifier = Modifier.size(if (compact) 10.dp else 12.dp)
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Text(
+                    text = strings.mediaStudio.vipBadgeLabel,
+                    color = Color.White,
+                    fontSize = if (compact) 9.sp else 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun AppliedMediaDecorationsOverlay(
     colorFilterId: String,
@@ -195,6 +259,10 @@ fun AppliedMediaDecorationsOverlay(
     isLiveStream: Boolean,
     playbackSpeed: Float = 1f,
     isMuted: Boolean = false,
+    overlayText: String = "",
+    overlayColorHex: Long = 0xFFFFFFFF,
+    soundName: String = "Original Audio",
+    timerDurationSec: Int = 0,
     languageCode: String = "en_US",
     modifier: Modifier = Modifier
 ) {
@@ -299,7 +367,71 @@ fun AppliedMediaDecorationsOverlay(
             }
         }
 
-        // Moji Stickers Strip Overlay (bottom-left above caption/controls)
+        if (overlayText.isNotBlank()) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color.Black.copy(alpha = 0.52f),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 24.dp)
+            ) {
+                Text(
+                    text = overlayText,
+                    color = Color(overlayColorHex),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        }
+
+        // Bottom-left sound / timer strip & Moji Stickers Overlay
+        if (soundName.isNotBlank() && soundName != "Original Audio" || timerDurationSec > 0) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.Black.copy(alpha = 0.52f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (soundName.isNotBlank() && soundName != "Original Audio") {
+                    Icon(
+                        imageVector = Icons.Filled.Audiotrack,
+                        contentDescription = null,
+                        tint = Color(0xFF80DEEA),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = soundName,
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (timerDurationSec > 0) {
+                    Icon(
+                        imageVector = Icons.Filled.Timer,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD54F),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "${timerDurationSec}s",
+                        color = Color(0xFFFFD54F),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         if (mojiStickers.isNotEmpty()) {
             Row(
                 modifier = Modifier
@@ -826,7 +958,14 @@ fun LiveAndRecordStudioDialog(
         val savedUri = pendingCaptureUri
         if (success && savedUri != null) {
             onShowSnackbar(studioStrings.recordedVideoReadySnackbar)
-            onRecordedVideoReady(savedUri.toString(), editDraft.copy(isLiveStream = false))
+            onRecordedVideoReady(
+                savedUri.toString(),
+                editDraft.copy(
+                    isLiveStream = false,
+                    timerDurationSec = recordingDurationLimitSec,
+                    useFrontCamera = useFrontCamera
+                )
+            )
         } else {
             onShowSnackbar(strings.cameraPermissionRequired)
         }
@@ -867,7 +1006,14 @@ fun LiveAndRecordStudioDialog(
             if (recordingElapsedSec >= recordingDurationLimitSec) {
                 isSimulatedRecording = false
                 onShowSnackbar(studioStrings.recordedVideoReadySnackbar)
-                onRecordedVideoReady(null, editDraft.copy(isLiveStream = false))
+                onRecordedVideoReady(
+                    null,
+                    editDraft.copy(
+                        isLiveStream = false,
+                        timerDurationSec = recordingDurationLimitSec,
+                        useFrontCamera = useFrontCamera
+                    )
+                )
             }
         }
     }
@@ -1248,7 +1394,14 @@ fun LiveAndRecordStudioDialog(
                                     } else {
                                         isSimulatedRecording = false
                                         onShowSnackbar(studioStrings.recordedVideoReadySnackbar)
-                                        onRecordedVideoReady(null, editDraft.copy(isLiveStream = false))
+                                        onRecordedVideoReady(
+                                            null,
+                                            editDraft.copy(
+                                                isLiveStream = false,
+                                                timerDurationSec = recordingDurationLimitSec,
+                                                useFrontCamera = useFrontCamera
+                                            )
+                                        )
                                     }
                                 },
                                 shape = RoundedCornerShape(14.dp),

@@ -71,7 +71,13 @@ fun UploadProgressCard(
                     UploadStage.PREPARING -> strings.stagePreparing
                     UploadStage.PROCESSING_MEDIA -> strings.stageProcessingMedia
                     UploadStage.UPLOADING -> strings.stageUploading
+                    UploadStage.REVIEW_1_MIN -> strings.mediaStudio.review1MinProgressDetail(uploadState.reviewRemainingSec)
                     UploadStage.FINALIZING -> strings.stageFinalizing
+                }
+                val bannerTitle = if (uploadState.stage == UploadStage.REVIEW_1_MIN) {
+                    strings.mediaStudio.stepReview1MinLabel
+                } else {
+                    strings.processingTitle
                 }
                 val percent = (uploadState.progress * 100).toInt().coerceIn(0, 100)
 
@@ -93,7 +99,7 @@ fun UploadProgressCard(
                             if (!uploadState.previewUri.isNullOrBlank()) {
                                 AsyncImage(
                                     model = uploadState.previewUri,
-                                    contentDescription = strings.processingTitle,
+                                    contentDescription = bannerTitle,
                                     modifier = Modifier
                                         .size(44.dp)
                                         .clip(RoundedCornerShape(8.dp)),
@@ -120,7 +126,7 @@ fun UploadProgressCard(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = strings.processingTitle,
+                                    text = bannerTitle,
                                     style = MaterialTheme.typography.labelLarge.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = BrandPrimary

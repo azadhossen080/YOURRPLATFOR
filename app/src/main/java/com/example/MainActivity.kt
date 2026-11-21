@@ -300,8 +300,6 @@ fun MainAppContent(
     val notifications by viewModel.notifications.collectAsState()
     val friends by viewModel.friends.collectAsState()
     val reviews by viewModel.reviews.collectAsState()
-    val lastExportPath by viewModel.lastExportPath.collectAsState()
-    val lastExportTimestamp by viewModel.lastExportTimestamp.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val activeReelPostId by viewModel.activeReelPostId.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -390,17 +388,9 @@ fun MainAppContent(
                     onShowSnackbar = { showSnackbar(it) }
                 )
             } else if (activeSubScreen == SubScreen.REVIEWS_STORAGE) {
-                val collectedJson = remember(userProfile, posts, friends, reviews, settings) {
-                    viewModel.buildCollectedUserDataJson()
-                }
                 ReviewsAndStorageScreen(
                     userProfile = userProfile,
-                    postsCount = posts.count { it.isUserPost },
-                    friendsCount = friendsCount,
                     reviews = reviews,
-                    collectedJson = collectedJson,
-                    lastExportPath = lastExportPath,
-                    lastExportTimestamp = lastExportTimestamp,
                     onSubmitReview = { rating, comment ->
                         viewModel.submitReview(rating, comment)
                     },
@@ -413,9 +403,6 @@ fun MainAppContent(
                     onDeleteReview = { reviewId ->
                         viewModel.deleteReview(reviewId)
                     },
-                    onExportUserData = { viewModel.exportCollectedUserData() },
-                    onShareJsonText = { json -> onShareText(json) },
-                    onCopyText = { text -> onCopyText(text) },
                     onShowSnackbar = { showSnackbar(it) },
                     onBack = { activeSubScreen = null }
                 )
@@ -525,6 +512,7 @@ fun MainAppContent(
                                 aiRepository = viewModel.aiRepository,
                                 uploadState = uploadState,
                                 selectedLanguageCode = settings.selectedLanguageCode,
+                                friends = friends,
                                 initialText = createPostInitialText,
                                 initialStudioMode = createPostInitialMode,
                                 onConsumeInitialStudioMode = { createPostInitialMode = null },
@@ -683,6 +671,9 @@ fun MainAppContent(
                 viewModel.createOrUpdateIdentity(name, userId, email, phone)
                 showEditIdentityDialog = false
                 showSnackbar(strings.identity.identitySavedSnackbar)
+            },
+            onUpdateVerificationAndVip = { isVerified, isVip ->
+                viewModel.updateVerificationAndVip(isVerified, isVip)
             }
         )
     }
